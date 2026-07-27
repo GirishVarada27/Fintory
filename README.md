@@ -1,0 +1,2 @@
+# Fintory
+simple budgeting app
