@@ -10,6 +10,7 @@ import {
   numeric,
   integer,
   date,
+  jsonb,
   index,
   uniqueIndex,
   pgPolicy,
@@ -146,6 +147,7 @@ export const expenses = pgTable(
     source: expenseSourceEnum("source").notNull().default("manual"),
     receiptUrl: text("receipt_url"),
     notes: text("notes"),
+    tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -238,6 +240,141 @@ export const assets = pgTable(
   (t) => [
     index("assets_user_idx").on(t.userId),
     pgPolicy("assets_rls_policy", {
+      for: "all",
+      to: "public",
+      using: sql`${t.userId} = ${CURRENT_USER}`,
+      withCheck: sql`${t.userId} = ${CURRENT_USER}`,
+    }),
+  ],
+).enableRLS();
+
+// ---------------------------------------------------------------------------
+// Stage 2 — multi-currency, budgets, recurring detection.
+// ---------------------------------------------------------------------------
+
+// Global reference data (Fixer's historical rates), not user-owned — no RLS.
+// Fixer's free/basic plan only returns EUR-based rates, so baseCurrency is
+// always "EUR" in practice; the column exists so a future plan upgrade (or
+// provider swap) doesn't require a schema change.
+export const fxRatesHistory = pgTable(
+  "fx_rates_history",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    date: date("date").notNull(),
+    baseCurrency: varchar("base_currency", { length: 3 }).notNull(),
+    rates: jsonb("rates").notNull().$type<Record<string, number>>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("fx_rates_history_date_base_unique").on(t.date, t.baseCurrency)],
+);
+
+export const budgets = pgTable(
+  "budgets",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "cascade" }),
+    monthlyLimit: numeric("monthly_limit", { precision: 14, scale: 4 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull(),
+    alertThresholdPct: numeric("alert_threshold_pct", { precision: 5, scale: 2 }).notNull().default("80"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("budgets_user_category_unique").on(t.userId, t.categoryId),
+    pgPolicy("budgets_rls_policy", {
+      for: "all",
+      to: "public",
+      using: sql`${t.userId} = ${CURRENT_USER}`,
+      withCheck: sql`${t.userId} = ${CURRENT_USER}`,
+    }),
+  ],
+).enableRLS();
+
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "budget_threshold",
+  "recurring_detected",
+  "loan_reminder",
+]);
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    type: notificationTypeEnum("type").notNull(),
+    payload: jsonb("payload").notNull().$type<Record<string, unknown>>(),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("notifications_user_created_idx").on(t.userId, t.createdAt),
+    pgPolicy("notifications_rls_policy", {
+      for: "all",
+      to: "public",
+      using: sql`${t.userId} = ${CURRENT_USER}`,
+      withCheck: sql`${t.userId} = ${CURRENT_USER}`,
+    }),
+  ],
+).enableRLS();
+
+export const recurringStatusEnum = pgEnum("recurring_status", ["pending", "confirmed", "dismissed"]);
+
+export const recurringExpenses = pgTable(
+  "recurring_expenses",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    vendor: text("vendor").notNull(),
+    categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
+    averageAmount: numeric("average_amount", { precision: 14, scale: 4 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull(),
+    cadenceDays: integer("cadence_days").notNull(),
+    lastSeenDate: date("last_seen_date").notNull(),
+    status: recurringStatusEnum("status").notNull().default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("recurring_expenses_user_vendor_currency_unique").on(t.userId, t.vendor, t.currency),
+    pgPolicy("recurring_expenses_rls_policy", {
+      for: "all",
+      to: "public",
+      using: sql`${t.userId} = ${CURRENT_USER}`,
+      withCheck: sql`${t.userId} = ${CURRENT_USER}`,
+    }),
+  ],
+).enableRLS();
+
+// Denormalized userId (rather than an RLS policy that subqueries `expenses`)
+// keeps the policy a simple, fast, direct column check consistent with every
+// other business table instead of a special-cased join.
+export const expenseSplits = pgTable(
+  "expense_splits",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    expenseId: uuid("expense_id")
+      .notNull()
+      .references(() => expenses.id, { onDelete: "cascade" }),
+    categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
+    amount: numeric("amount", { precision: 14, scale: 4 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("expense_splits_expense_idx").on(t.expenseId),
+    pgPolicy("expense_splits_rls_policy", {
       for: "all",
       to: "public",
       using: sql`${t.userId} = ${CURRENT_USER}`,

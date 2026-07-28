@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { signOut, useSession } from "../lib/authClient";
+import NotificationBell from "./NotificationBell";
 
 const NAV_LINKS = [
   { to: "/", label: "Dashboard" },
@@ -7,6 +8,8 @@ const NAV_LINKS = [
   { to: "/loans", label: "Loans" },
   { to: "/savings", label: "Savings" },
   { to: "/assets", label: "Assets" },
+  { to: "/budgets", label: "Budgets" },
+  { to: "/recurring", label: "Recurring" },
 ];
 
 export default function NavBar() {
@@ -37,6 +40,7 @@ export default function NavBar() {
                 {link.label}
               </Link>
             ))}
+            <NotificationBell />
             <button
               onClick={handleSignOut}
               className="ml-2 rounded-full bg-white/10 px-3 py-1.5 transition hover:bg-white/20"

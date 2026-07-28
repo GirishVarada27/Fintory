@@ -6,6 +6,8 @@ import Expenses from "./pages/Expenses";
 import Loans from "./pages/Loans";
 import SavingsAccounts from "./pages/SavingsAccounts";
 import Assets from "./pages/Assets";
+import Budgets from "./pages/Budgets";
+import RecurringExpenses from "./pages/RecurringExpenses";
 import RequireAuth from "./components/RequireAuth";
 import NavBar from "./components/NavBar";
 
@@ -54,6 +56,22 @@ export default function App() {
             element={
               <RequireAuth>
                 <Assets />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/budgets"
+            element={
+              <RequireAuth>
+                <Budgets />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/recurring"
+            element={
+              <RequireAuth>
+                <RecurringExpenses />
               </RequireAuth>
             }
           />

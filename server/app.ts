@@ -11,6 +11,10 @@ import { loansRouter } from "./routes/loans";
 import { savingsAccountsRouter } from "./routes/savingsAccounts";
 import { assetsRouter } from "./routes/assets";
 import { dashboardRouter } from "./routes/dashboard";
+import { budgetsRouter } from "./routes/budgets";
+import { notificationsRouter } from "./routes/notifications";
+import { recurringExpensesRouter } from "./routes/recurringExpenses";
+import { exportRouter } from "./routes/export";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -30,6 +34,10 @@ export function createApp() {
   api.use("/savings-accounts", savingsAccountsRouter);
   api.use("/assets", assetsRouter);
   api.use("/dashboard", dashboardRouter);
+  api.use("/budgets", budgetsRouter);
+  api.use("/notifications", notificationsRouter);
+  api.use("/recurring-expenses", recurringExpensesRouter);
+  api.use("/export", exportRouter);
   app.use("/api/v1", api);
 
   if (process.env.NODE_ENV === "production") {

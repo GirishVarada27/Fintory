@@ -1,6 +1,13 @@
 import { api, type ItemResponse, type ListResponse } from "./client";
 import type { CreateExpenseInput, UpdateExpenseInput } from "../../../shared/schemas/expenses";
 
+export interface ExpenseSplit {
+  id: string;
+  expenseId: string;
+  categoryId: string | null;
+  amount: string;
+}
+
 export interface Expense {
   id: string;
   userId: string;
@@ -12,8 +19,10 @@ export interface Expense {
   source: "manual" | "scanned";
   receiptUrl: string | null;
   notes: string | null;
+  tags: string[];
   createdAt: string;
   updatedAt: string;
+  splits?: ExpenseSplit[];
 }
 
 export interface ListExpensesParams {
@@ -23,6 +32,12 @@ export interface ListExpensesParams {
   from?: string;
   to?: string;
   vendor?: string;
+  currency?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  tag?: string;
+  sortBy?: "date" | "amount" | "vendor" | "createdAt";
+  sortDir?: "asc" | "desc";
 }
 
 export function listExpenses(params: ListExpensesParams = {}) {

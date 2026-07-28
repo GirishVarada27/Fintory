@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
-import { sql } from "drizzle-orm";
 import { db } from "../db/index";
+import { setUserContext } from "../db/setUserContext";
 
 // Must run after requireAuth. Opens one transaction per request and sets
 // app.current_user_id (transaction-local, via set_config's third arg) so the
@@ -15,7 +15,7 @@ export function withUserContext(req: Request, res: Response, next: NextFunction)
   }
 
   db.transaction(async (tx) => {
-    await tx.execute(sql`select set_config('app.current_user_id', ${userId}, true)`);
+    await setUserContext(tx, userId);
     req.db = tx;
 
     await new Promise<void>((resolve, reject) => {

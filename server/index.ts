@@ -2,6 +2,7 @@ import "dotenv/config";
 import { createApp } from "./app";
 import { runMigrations } from "./db/migrate";
 import { seedDefaultCategories } from "./db/seed";
+import { startScheduledJobs } from "./jobs/scheduler";
 
 async function main() {
   await runMigrations();
@@ -12,6 +13,8 @@ async function main() {
   app.listen(port, () => {
     console.log(`Fintory server listening on port ${port}`);
   });
+
+  startScheduledJobs();
 }
 
 main().catch((err: unknown) => {
