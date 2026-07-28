@@ -10,6 +10,8 @@ const NAV_LINKS = [
   { to: "/assets", label: "Assets" },
   { to: "/budgets", label: "Budgets" },
   { to: "/recurring", label: "Recurring" },
+  { to: "/linked-accounts", label: "Linked" },
+  { to: "/account", label: "Account" },
 ];
 
 export default function NavBar() {

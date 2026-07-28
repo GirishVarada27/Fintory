@@ -10,6 +10,7 @@ import {
 import { validateBody, validateQuery } from "../middleware/validate";
 import { notFound, validationError } from "../lib/errors";
 import { encodeCursor as encodeSimpleCursor, decodeCursor as decodeSimpleCursor } from "../lib/pagination";
+import { writeAuditLog } from "../lib/auditLog";
 
 export const expensesRouter = Router();
 
@@ -135,6 +136,8 @@ expensesRouter.post("/", validateBody(createExpenseSchema), async (req, res) => 
       .returning();
   }
 
+  await writeAuditLog(req.db, req.user!.id, "expense", row.id, "create", null, { ...row, splits: createdSplits });
+
   res.status(201).json({ data: { ...row, splits: createdSplits } });
 });
 
@@ -145,22 +148,17 @@ expensesRouter.patch("/:id", validateBody(updateExpenseSchema), async (req, res)
   if (typeof updates.amount === "number") updates.amount = String(updates.amount);
   updates.updatedAt = new Date();
 
-  if (splits && splits.length > 0) {
-    const effectiveAmount =
-      typeof req.body.amount === "number"
-        ? req.body.amount
-        : await (async () => {
-            const [existing] = await req.db
-              .select({ amount: expenses.amount })
-              .from(expenses)
-              .where(and(eq(expenses.id, expenseId), eq(expenses.userId, req.user!.id)));
-            return existing ? Number(existing.amount) : undefined;
-          })();
+  const [existing] = await req.db
+    .select()
+    .from(expenses)
+    .where(and(eq(expenses.id, expenseId), eq(expenses.userId, req.user!.id)));
+  if (!existing) {
+    notFound(res);
+    return;
+  }
 
-    if (effectiveAmount === undefined) {
-      notFound(res);
-      return;
-    }
+  if (splits && splits.length > 0) {
+    const effectiveAmount = typeof req.body.amount === "number" ? req.body.amount : Number(existing.amount);
     const sum = splits.reduce((s: number, x: { amount: number }) => s + x.amount, 0);
     if (Math.abs(sum - effectiveAmount) >= 0.01) {
       validationError(res, "Split amounts must add up to the total expense amount");
@@ -198,6 +196,8 @@ expensesRouter.patch("/:id", validateBody(updateExpenseSchema), async (req, res)
     resultSplits = await req.db.select().from(expenseSplits).where(eq(expenseSplits.expenseId, expenseId));
   }
 
+  await writeAuditLog(req.db, req.user!.id, "expense", row.id, "update", existing, { ...row, splits: resultSplits });
+
   res.json({ data: { ...row, splits: resultSplits } });
 });
 
@@ -210,5 +210,8 @@ expensesRouter.delete("/:id", async (req, res) => {
     notFound(res);
     return;
   }
+
+  await writeAuditLog(req.db, req.user!.id, "expense", row.id, "delete", row, null);
+
   res.status(204).send();
 });

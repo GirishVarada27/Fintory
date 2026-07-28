@@ -10,6 +10,7 @@ import type { PaginationQuery } from "../../shared/schemas/common";
 import { validateBody, validateQuery } from "../middleware/validate";
 import { notFound } from "../lib/errors";
 import { cursorCondition, decodeCursor, encodeCursor } from "../lib/pagination";
+import { writeAuditLog } from "../lib/auditLog";
 
 export const assetsRouter = Router();
 
@@ -67,20 +68,37 @@ assetsRouter.post("/", validateBody(createAssetSchema), async (req, res) => {
     .insert(assets)
     .values({ ...stringifyMoney(req.body), userId: req.user!.id })
     .returning();
+
+  await writeAuditLog(req.db, req.user!.id, "asset", row.id, "create", null, row);
+
   res.status(201).json({ data: row });
 });
 
 assetsRouter.patch("/:id", validateBody(updateAssetSchema), async (req, res) => {
+  const assetId = req.params.id as string;
   const updates = { ...stringifyMoney(req.body), updatedAt: new Date() };
+
+  const [existing] = await req.db
+    .select()
+    .from(assets)
+    .where(and(eq(assets.id, assetId), eq(assets.userId, req.user!.id)));
+  if (!existing) {
+    notFound(res);
+    return;
+  }
+
   const [row] = await req.db
     .update(assets)
     .set(updates)
-    .where(and(eq(assets.id, req.params.id as string), eq(assets.userId, req.user!.id)))
+    .where(and(eq(assets.id, assetId), eq(assets.userId, req.user!.id)))
     .returning();
   if (!row) {
     notFound(res);
     return;
   }
+
+  await writeAuditLog(req.db, req.user!.id, "asset", row.id, "update", existing, row);
+
   res.json({ data: row });
 });
 
@@ -93,5 +111,8 @@ assetsRouter.delete("/:id", async (req, res) => {
     notFound(res);
     return;
   }
+
+  await writeAuditLog(req.db, req.user!.id, "asset", row.id, "delete", row, null);
+
   res.status(204).send();
 });

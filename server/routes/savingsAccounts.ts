@@ -10,6 +10,7 @@ import type { PaginationQuery } from "../../shared/schemas/common";
 import { validateBody, validateQuery } from "../middleware/validate";
 import { notFound } from "../lib/errors";
 import { cursorCondition, decodeCursor, encodeCursor } from "../lib/pagination";
+import { writeAuditLog } from "../lib/auditLog";
 
 export const savingsAccountsRouter = Router();
 
@@ -67,20 +68,37 @@ savingsAccountsRouter.post("/", validateBody(createSavingsAccountSchema), async 
     .insert(savingsAccounts)
     .values({ ...stringifyMoney(req.body), userId: req.user!.id })
     .returning();
+
+  await writeAuditLog(req.db, req.user!.id, "savings_account", row.id, "create", null, row);
+
   res.status(201).json({ data: row });
 });
 
 savingsAccountsRouter.patch("/:id", validateBody(updateSavingsAccountSchema), async (req, res) => {
+  const accountId = req.params.id as string;
   const updates = { ...stringifyMoney(req.body), updatedAt: new Date() };
+
+  const [existing] = await req.db
+    .select()
+    .from(savingsAccounts)
+    .where(and(eq(savingsAccounts.id, accountId), eq(savingsAccounts.userId, req.user!.id)));
+  if (!existing) {
+    notFound(res);
+    return;
+  }
+
   const [row] = await req.db
     .update(savingsAccounts)
     .set(updates)
-    .where(and(eq(savingsAccounts.id, req.params.id as string), eq(savingsAccounts.userId, req.user!.id)))
+    .where(and(eq(savingsAccounts.id, accountId), eq(savingsAccounts.userId, req.user!.id)))
     .returning();
   if (!row) {
     notFound(res);
     return;
   }
+
+  await writeAuditLog(req.db, req.user!.id, "savings_account", row.id, "update", existing, row);
+
   res.json({ data: row });
 });
 
@@ -93,5 +111,8 @@ savingsAccountsRouter.delete("/:id", async (req, res) => {
     notFound(res);
     return;
   }
+
+  await writeAuditLog(req.db, req.user!.id, "savings_account", row.id, "delete", row, null);
+
   res.status(204).send();
 });

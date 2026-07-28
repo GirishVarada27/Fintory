@@ -6,6 +6,7 @@ import { fetchTodaysFxRates } from "./fetchFxRates";
 import { detectRecurringForUser } from "./detectRecurring";
 import { checkBudgetThresholdsForUser } from "./checkBudgets";
 import { checkLoanRemindersForUser } from "./loanReminders";
+import { syncPlaidTransactionsForUser } from "./syncPlaidTransactions";
 
 async function getAllUserIds(): Promise<string[]> {
   const rows = await db.select({ id: user.id }).from(user);
@@ -29,6 +30,11 @@ async function runPerUserJobs(): Promise<void> {
       await runAsUser(userId, (tx) => checkLoanRemindersForUser(tx, userId));
     } catch (err) {
       console.error(`[jobs] checkLoanReminders failed for user ${userId}`, err);
+    }
+    try {
+      await runAsUser(userId, (tx) => syncPlaidTransactionsForUser(tx, userId));
+    } catch (err) {
+      console.error(`[jobs] syncPlaidTransactions failed for user ${userId}`, err);
     }
   }
 }

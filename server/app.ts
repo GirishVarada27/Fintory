@@ -15,6 +15,9 @@ import { budgetsRouter } from "./routes/budgets";
 import { notificationsRouter } from "./routes/notifications";
 import { recurringExpensesRouter } from "./routes/recurringExpenses";
 import { exportRouter } from "./routes/export";
+import { receiptsRouter } from "./routes/receipts";
+import { plaidRouter } from "./routes/plaid";
+import { accountRouter } from "./routes/account";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -38,6 +41,9 @@ export function createApp() {
   api.use("/notifications", notificationsRouter);
   api.use("/recurring-expenses", recurringExpensesRouter);
   api.use("/export", exportRouter);
+  api.use("/receipts", receiptsRouter);
+  api.use("/plaid", plaidRouter);
+  api.use("/account", accountRouter);
   app.use("/api/v1", api);
 
   if (process.env.NODE_ENV === "production") {

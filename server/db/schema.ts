@@ -128,7 +128,7 @@ export const categories = pgTable(
   ],
 ).enableRLS();
 
-export const expenseSourceEnum = pgEnum("expense_source", ["manual", "scanned"]);
+export const expenseSourceEnum = pgEnum("expense_source", ["manual", "scanned", "linked"]);
 
 export const expenses = pgTable(
   "expenses",
@@ -378,6 +378,107 @@ export const expenseSplits = pgTable(
       for: "all",
       to: "public",
       using: sql`${t.userId} = ${CURRENT_USER}`,
+      withCheck: sql`${t.userId} = ${CURRENT_USER}`,
+    }),
+  ],
+).enableRLS();
+
+// ---------------------------------------------------------------------------
+// Stage 3 — bank linking (Plaid), receipt scanning, audit trail.
+// ---------------------------------------------------------------------------
+
+export const linkedAccounts = pgTable(
+  "linked_accounts",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    plaidItemId: text("plaid_item_id").notNull(),
+    // AES-256-GCM ciphertext (server/lib/encryption.ts) — never the raw Plaid
+    // access token, even though the database itself is encrypted at rest too.
+    encryptedAccessToken: text("encrypted_access_token").notNull(),
+    institutionName: text("institution_name").notNull(),
+    accountName: text("account_name").notNull(),
+    accountType: varchar("account_type", { length: 50 }),
+    mask: varchar("mask", { length: 8 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("linked_accounts_plaid_item_unique").on(t.plaidItemId),
+    pgPolicy("linked_accounts_rls_policy", {
+      for: "all",
+      to: "public",
+      using: sql`${t.userId} = ${CURRENT_USER}`,
+      withCheck: sql`${t.userId} = ${CURRENT_USER}`,
+    }),
+  ],
+).enableRLS();
+
+export const linkedTransactions = pgTable(
+  "linked_transactions",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    linkedAccountId: uuid("linked_account_id")
+      .notNull()
+      .references(() => linkedAccounts.id, { onDelete: "cascade" }),
+    plaidTransactionId: text("plaid_transaction_id").notNull(),
+    amount: numeric("amount", { precision: 14, scale: 4 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull(),
+    vendor: text("vendor").notNull(),
+    date: date("date").notNull(),
+    pending: boolean("pending").notNull().default(false),
+    // Set once the sync job decides this either created a new expense or
+    // matched an existing manual one (see server/lib/dedupe.ts).
+    expenseId: uuid("expense_id").references(() => expenses.id, { onDelete: "set null" }),
+    dedupeStatus: varchar("dedupe_status", { length: 20 }).notNull().default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("linked_transactions_plaid_txn_unique").on(t.plaidTransactionId),
+    index("linked_transactions_user_idx").on(t.userId),
+    pgPolicy("linked_transactions_rls_policy", {
+      for: "all",
+      to: "public",
+      using: sql`${t.userId} = ${CURRENT_USER}`,
+      withCheck: sql`${t.userId} = ${CURRENT_USER}`,
+    }),
+  ],
+).enableRLS();
+
+export const auditActionEnum = pgEnum("audit_action", ["create", "update", "delete"]);
+export const auditEntityEnum = pgEnum("audit_entity_type", ["expense", "loan", "savings_account", "asset"]);
+
+export const auditLog = pgTable(
+  "audit_log",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    entityType: auditEntityEnum("entity_type").notNull(),
+    entityId: uuid("entity_id").notNull(),
+    action: auditActionEnum("action").notNull(),
+    diff: jsonb("diff").notNull().$type<{ before: Record<string, unknown> | null; after: Record<string, unknown> | null }>(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("audit_log_user_entity_idx").on(t.userId, t.entityType, t.entityId),
+    // Deliberately no update/delete policy: RLS default-denies any command
+    // without a matching policy, so this log is append-only at the DB level
+    // even for the app's own role — a bug can never let it edit history.
+    pgPolicy("audit_log_select_policy", {
+      for: "select",
+      to: "public",
+      using: sql`${t.userId} = ${CURRENT_USER}`,
+    }),
+    pgPolicy("audit_log_insert_policy", {
+      for: "insert",
+      to: "public",
       withCheck: sql`${t.userId} = ${CURRENT_USER}`,
     }),
   ],

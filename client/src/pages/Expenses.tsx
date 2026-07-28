@@ -1,6 +1,7 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { listExpenses, getExpense, createExpense, updateExpense, deleteExpense, type Expense } from "../api/expenses";
 import { listCategories, type Category } from "../api/categories";
+import { scanReceipt } from "../api/receipts";
 import { useSession } from "../lib/authClient";
 import {
   cardClass,
@@ -44,6 +45,10 @@ export default function Expenses() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [scanning, setScanning] = useState(false);
+  const [scannedReceiptUrl, setScannedReceiptUrl] = useState<string | null>(null);
+  const [scanNote, setScanNote] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const defaultCurrency = (session?.user as { defaultDisplayCurrency?: string } | undefined)
@@ -86,6 +91,40 @@ export default function Expenses() {
   function resetForm() {
     setEditingId(null);
     setForm(emptyForm);
+    setScannedReceiptUrl(null);
+    setScanNote(null);
+  }
+
+  async function handleScanFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setScanning(true);
+    setError(null);
+    try {
+      const { receiptUrl, extracted } = await scanReceipt(file);
+      setScannedReceiptUrl(receiptUrl);
+
+      const matchedCategory = extracted.categorySuggestion
+        ? categories.find((c) => c.name.toLowerCase() === extracted.categorySuggestion?.toLowerCase())
+        : undefined;
+
+      setForm((f) => ({
+        ...f,
+        amount: extracted.amount ? String(extracted.amount) : f.amount,
+        currency: extracted.currency || f.currency,
+        vendor: extracted.vendor || f.vendor,
+        date: extracted.date || f.date,
+        categoryId: matchedCategory?.id ?? f.categoryId,
+      }));
+      setScanNote(
+        `Extracted from photo — review before saving${extracted.categorySuggestion && !matchedCategory ? ` (suggested category: ${extracted.categorySuggestion}, not in your list)` : ""}.`,
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not scan that receipt");
+    } finally {
+      setScanning(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   }
 
   function addSplitRow() {
@@ -133,7 +172,8 @@ export default function Expenses() {
         categoryId: form.splitMode ? undefined : form.categoryId || undefined,
         vendor: form.vendor,
         date: form.date,
-        source: "manual" as const,
+        source: scannedReceiptUrl ? ("scanned" as const) : ("manual" as const),
+        receiptUrl: scannedReceiptUrl ?? undefined,
         notes: form.notes || undefined,
         tags: tags.length > 0 ? tags : undefined,
         splits,
@@ -156,6 +196,8 @@ export default function Expenses() {
     // row); fetch the full detail so editing shows existing splits correctly.
     const { data: expense } = await getExpense(expenseRow.id);
     setEditingId(expense.id);
+    setScannedReceiptUrl(null);
+    setScanNote(null);
     const hasSplits = !!expense.splits && expense.splits.length > 0;
     setForm({
       amount: expense.amount,
@@ -195,6 +237,21 @@ export default function Expenses() {
       <h1 className="text-2xl font-bold text-white">Expenses</h1>
 
       <form onSubmit={handleSubmit} className={`grid grid-cols-1 gap-3 sm:grid-cols-6 ${cardClass}`}>
+        <div className="sm:col-span-6 flex items-center gap-3">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleScanFile}
+            className="hidden"
+            id="receipt-scan-input"
+          />
+          <label htmlFor="receipt-scan-input" className={`cursor-pointer ${secondaryButtonClass}`}>
+            {scanning ? "Scanning…" : "Scan a receipt"}
+          </label>
+          {scanNote && <p className="text-xs text-slate-400">{scanNote}</p>}
+        </div>
         <div>
           <label className={labelClass}>Amount</label>
           <input

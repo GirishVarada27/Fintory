@@ -14,3 +14,25 @@ services:
         sync: false
       - key: BETTER_AUTH_URL
         sync: false
+      - key: FIXER_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      # Optional — omit to leave Plaid linking stubbed (routes respond "not configured")
+      - key: PLAID_CLIENT_ID
+        sync: false
+      - key: PLAID_SECRET
+        sync: false
+      - key: PLAID_ENV
+        value: sandbox
+      # Optional — omit to leave receipt photo storage as a non-durable data: URL stub
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false

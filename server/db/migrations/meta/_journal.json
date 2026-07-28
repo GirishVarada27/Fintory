@@ -15,6 +15,20 @@
       "when": 1785212884100,
       "tag": "0001_melodic_maria_hill",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785261487504,
+      "tag": "0002_wise_mongu",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785262388760,
+      "tag": "0003_outstanding_nuke",
+      "breakpoints": true
     }
   ]
 }

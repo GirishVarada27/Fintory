@@ -18,6 +18,7 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1096.0",
     "@tailwindcss/vite": "^4.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "better-auth": "^1.2.7",
@@ -25,11 +26,15 @@
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.45.2",
     "express": "^5.0.1",
+    "express-rate-limit": "^8.6.1",
+    "multer": "^2.2.0",
     "node-cron": "^4.6.0",
     "pdfkit": "^0.19.1",
     "pg": "^8.13.1",
+    "plaid": "^45.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-plaid-link": "^5.0.0",
     "react-router-dom": "^7.1.1",
     "tailwindcss": "^4.0.0",
     "tsx": "^4.19.2",
@@ -38,6 +43,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
+    "@types/multer": "^2.2.0",
     "@types/node": "^22.10.5",
     "@types/node-cron": "^3.0.11",
     "@types/pdfkit": "^0.17.6",

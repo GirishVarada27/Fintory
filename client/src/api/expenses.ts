@@ -16,7 +16,7 @@ export interface Expense {
   categoryId: string | null;
   vendor: string;
   date: string;
-  source: "manual" | "scanned";
+  source: "manual" | "scanned" | "linked";
   receiptUrl: string | null;
   notes: string | null;
   tags: string[];
