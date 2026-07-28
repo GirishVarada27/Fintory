@@ -18,7 +18,10 @@
     "db:push": "drizzle-kit push"
   },
   "dependencies": {
+    "@tailwindcss/vite": "^4.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
     "better-auth": "^1.2.7",
+    "cross-env": "^7.0.3",
     "dotenv": "^16.4.7",
     "drizzle-orm": "^0.45.2",
     "express": "^5.0.1",
@@ -26,26 +29,23 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.1",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.19.2",
+    "vite": "^6.0.7",
     "zod": "^3.24.1"
   },
   "devDependencies": {
-    "@tailwindcss/vite": "^4.0.0",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.5",
     "@types/pg": "^8.11.10",
     "@types/react": "^19.0.2",
     "@types/react-dom": "^19.0.2",
     "@types/supertest": "^6.0.2",
-    "@vitejs/plugin-react": "^4.3.4",
     "concurrently": "^9.1.2",
-    "cross-env": "^7.0.3",
     "drizzle-kit": "^0.31.6",
     "oxlint": "^0.15.5",
     "supertest": "^7.0.0",
-    "tailwindcss": "^4.0.0",
-    "tsx": "^4.19.2",
     "typescript": "^5.7.3",
-    "vite": "^6.0.7",
     "vitest": "^2.1.8"
   }
 }
