@@ -20,6 +20,7 @@ import { receiptsRouter } from "./routes/receipts";
 import { plaidRouter } from "./routes/plaid";
 import { accountRouter } from "./routes/account";
 import { sharesRouter } from "./routes/shares";
+import { assistantRouter } from "./routes/assistant";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -48,6 +49,7 @@ export function createApp() {
   api.use("/plaid", plaidRouter);
   api.use("/account", accountRouter);
   api.use("/shares", sharesRouter);
+  api.use("/assistant", assistantRouter);
   app.use("/api/v1", api);
 
   if (process.env.NODE_ENV === "production") {

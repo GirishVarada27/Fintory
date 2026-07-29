@@ -13,6 +13,7 @@ import RecurringExpenses from "./pages/RecurringExpenses";
 import LinkedAccounts from "./pages/LinkedAccounts";
 import AccountSettings from "./pages/AccountSettings";
 import Sharing from "./pages/Sharing";
+import Assistant from "./pages/Assistant";
 import Privacy from "./pages/Privacy";
 import Terms from "./pages/Terms";
 import RequireAuth from "./components/RequireAuth";
@@ -121,6 +122,14 @@ export default function App() {
             element={
               <RequireAuth>
                 <Sharing />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/assistant"
+            element={
+              <RequireAuth>
+                <Assistant />
               </RequireAuth>
             }
           />

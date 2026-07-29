@@ -24,6 +24,7 @@ export default function NavBar() {
     { to: "/recurring", label: t("nav.recurring") },
     { to: "/linked-accounts", label: t("nav.linked") },
     { to: "/sharing", label: t("nav.sharing") },
+    { to: "/assistant", label: t("nav.assistant") },
     { to: "/account", label: t("nav.account") },
   ];
 
