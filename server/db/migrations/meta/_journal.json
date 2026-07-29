@@ -50,6 +50,20 @@
       "when": 1785274622380,
       "tag": "0006_large_bloodstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1785299620683,
+      "tag": "0007_zippy_natasha_romanoff",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785299765248,
+      "tag": "0008_woozy_banshee",
+      "breakpoints": true
     }
   ]
 }

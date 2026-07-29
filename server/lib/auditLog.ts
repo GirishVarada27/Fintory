@@ -2,7 +2,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { auditLog } from "../db/schema";
 import type * as schema from "../db/schema";
 
-export type AuditEntityType = "expense" | "loan" | "savings_account" | "asset";
+export type AuditEntityType = "expense" | "loan" | "savings_account" | "asset" | "income";
 export type AuditAction = "create" | "update" | "delete";
 
 export async function writeAuditLog(

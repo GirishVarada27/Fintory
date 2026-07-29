@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
+import IncomePage from "./pages/Income";
 import Expenses from "./pages/Expenses";
 import Loans from "./pages/Loans";
 import SavingsAccounts from "./pages/SavingsAccounts";
@@ -40,6 +41,14 @@ export default function App() {
             element={
               <RequireAuth>
                 <Dashboard />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/income"
+            element={
+              <RequireAuth>
+                <IncomePage />
               </RequireAuth>
             }
           />

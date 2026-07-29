@@ -1,6 +1,6 @@
 import { and, eq, gte, lt } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { assets, categories, expenses, loans, savingsAccounts, user as userTable } from "../db/schema";
+import { assets, categories, expenses, income as incomeTable, loans, savingsAccounts, user as userTable } from "../db/schema";
 import type * as schema from "../db/schema";
 import { computeLoanAmortization } from "../../shared/amortization";
 import { getCategorySpend, type CategorySpendRow } from "./categorySpend";
@@ -39,7 +39,10 @@ function buildCategoryBreakdown(
 export interface ConvertedSummary {
   currency: string;
   monthTotalSpend: string;
+  monthTotalIncome: string;
+  cashFlow: string;
   netWorth: string;
+  savingsTotal: string;
   note: string;
   unavailable: boolean;
 }
@@ -49,6 +52,8 @@ export interface DashboardSummaryData {
   byCurrency: CurrencySummary[];
   converted: ConvertedSummary;
   insights: SpendingInsight[];
+  assetsByType: CategoryTotal[];
+  liabilitiesByType: CategoryTotal[];
 }
 
 function outstandingPrincipalOf(loan: {
@@ -94,6 +99,10 @@ export async function computeDashboardSummary(
     .select({ date: expenses.date, currency: expenses.currency, amount: expenses.amount })
     .from(expenses)
     .where(and(eq(expenses.userId, userId), gte(expenses.date, start), lt(expenses.date, end)));
+  const monthIncomeDates = await tx
+    .select({ date: incomeTable.date, currency: incomeTable.currency, amount: incomeTable.amount })
+    .from(incomeTable)
+    .where(and(eq(incomeTable.userId, userId), gte(incomeTable.date, start), lt(incomeTable.date, end)));
 
   const categoryNameById = new Map(allCategories.map((c) => [c.id, c.name]));
 
@@ -142,21 +151,37 @@ export async function computeDashboardSummary(
   const todayStr = new Date().toISOString().slice(0, 10);
 
   let convertedSpend = 0;
+  let convertedIncome = 0;
   let convertedNetWorth = 0;
+  let convertedSavings = 0;
   let conversionFailed = false;
+  const assetsByTypeMap = new Map<string, number>();
+  const liabilitiesByTypeMap = new Map<string, number>();
 
   try {
     for (const e of monthExpenseDates) {
       convertedSpend += await convertOnDate(tx, Number(e.amount), e.currency, displayCurrency, e.date);
     }
+    for (const i of monthIncomeDates) {
+      convertedIncome += await convertOnDate(tx, Number(i.amount), i.currency, displayCurrency, i.date);
+    }
     for (const a of allAssets) {
-      convertedNetWorth += await convertOnDate(tx, Number(a.currentValue), a.currency, displayCurrency, todayStr);
+      const converted = await convertOnDate(tx, Number(a.currentValue), a.currency, displayCurrency, todayStr);
+      convertedNetWorth += converted;
+      const key = a.type?.trim() || "Uncategorized";
+      assetsByTypeMap.set(key, (assetsByTypeMap.get(key) ?? 0) + converted);
     }
     for (const s of allSavings) {
-      convertedNetWorth += await convertOnDate(tx, Number(s.balance), s.currency, displayCurrency, todayStr);
+      const converted = await convertOnDate(tx, Number(s.balance), s.currency, displayCurrency, todayStr);
+      convertedNetWorth += converted;
+      convertedSavings += converted;
+      assetsByTypeMap.set("Savings", (assetsByTypeMap.get("Savings") ?? 0) + converted);
     }
     for (const l of allLoans) {
-      convertedNetWorth -= await convertOnDate(tx, outstandingPrincipalOf(l), l.currency, displayCurrency, todayStr);
+      const converted = await convertOnDate(tx, outstandingPrincipalOf(l), l.currency, displayCurrency, todayStr);
+      convertedNetWorth -= converted;
+      const key = l.type?.trim() || "Uncategorized";
+      liabilitiesByTypeMap.set(key, (liabilitiesByTypeMap.get(key) ?? 0) + converted);
     }
   } catch (err) {
     console.error("[dashboard] currency conversion failed", err);
@@ -166,12 +191,25 @@ export async function computeDashboardSummary(
   const converted: ConvertedSummary = {
     currency: displayCurrency,
     monthTotalSpend: conversionFailed ? "0.00" : convertedSpend.toFixed(2),
+    monthTotalIncome: conversionFailed ? "0.00" : convertedIncome.toFixed(2),
+    cashFlow: conversionFailed ? "0.00" : (convertedIncome - convertedSpend).toFixed(2),
     netWorth: conversionFailed ? "0.00" : convertedNetWorth.toFixed(2),
+    savingsTotal: conversionFailed ? "0.00" : convertedSavings.toFixed(2),
     note: conversionFailed
       ? "Currency conversion is temporarily unavailable — showing native per-currency totals only below."
       : `Converted into ${displayCurrency} using each amount's historical exchange rate for its date.`,
     unavailable: conversionFailed,
   };
 
-  return { month, byCurrency, converted, insights };
+  const toBreakdown = (map: Map<string, number>): CategoryTotal[] =>
+    Array.from(map.entries()).map(([categoryName, total]) => ({ categoryName, total: total.toFixed(2) }));
+
+  return {
+    month,
+    byCurrency,
+    converted,
+    insights,
+    assetsByType: conversionFailed ? [] : toBreakdown(assetsByTypeMap),
+    liabilitiesByType: conversionFailed ? [] : toBreakdown(liabilitiesByTypeMap),
+  };
 }

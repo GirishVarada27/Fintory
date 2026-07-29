@@ -76,14 +76,20 @@ const reportQuerySchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}$/, "Expected YYYY-MM")
     .optional(),
+  format: z.enum(["currency", "percentage"]).default("currency"),
 });
 
 exportRouter.get("/report.pdf", validateQuery(reportQuerySchema), async (req, res) => {
-  const { month } = req.validatedQuery as z.infer<typeof reportQuerySchema>;
+  const { month, format } = req.validatedQuery as z.infer<typeof reportQuerySchema>;
+  const isPercentage = format === "percentage";
   const summary = await computeDashboardSummary(req.db, req.user!.id, month);
 
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `attachment; filename="fintory-report-${summary.month}.pdf"`);
+  const filenameSuffix = isPercentage ? "-percentage" : "";
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="fintory-report-${summary.month}${filenameSuffix}.pdf"`,
+  );
 
   const doc = new PDFDocument({ margin: 50, bufferPages: true });
   doc.pipe(res);
@@ -133,15 +139,21 @@ exportRouter.get("/report.pdf", validateQuery(reportQuerySchema), async (req, re
 
   for (const currencySummary of summary.byCurrency) {
     ensureSpace(doc, 220, 60);
-    drawSectionTitle(doc, marginX, `${currencySummary.currency} — Category Breakdown`);
+    const sectionSuffix = isPercentage ? " (% of spend)" : "";
+    drawSectionTitle(doc, marginX, `${currencySummary.currency} — Category Breakdown${sectionSuffix}`);
 
     if (currencySummary.categoryBreakdown.length > 0) {
+      const categoryTotal = currencySummary.categoryBreakdown.reduce((sum, c) => sum + Number(c.total), 0);
+      const formatValue = isPercentage
+        ? (n: number) => `${categoryTotal > 0 ? Math.round((n / categoryTotal) * 100) : 0}%`
+        : (n: number) => formatMoney(n, currencySummary.currency);
+
       drawBarChart(
         doc,
         marginX,
         contentWidth,
         currencySummary.categoryBreakdown.map((c) => ({ label: c.categoryName, value: Number(c.total) })),
-        (n) => formatMoney(n, currencySummary.currency),
+        formatValue,
       );
 
       ensureSpace(doc, currencySummary.categoryBreakdown.length * 22 + 60, 60);
@@ -150,14 +162,17 @@ exportRouter.get("/report.pdf", validateQuery(reportQuerySchema), async (req, re
         marginX,
         [
           { header: "Category", width: contentWidth - 140 },
-          { header: "Amount", width: 140, align: "right" },
+          { header: isPercentage ? "% of Spend" : "Amount", width: 140, align: "right" },
         ],
         [
           ...currencySummary.categoryBreakdown
             .slice()
             .sort((a, b) => Number(b.total) - Number(a.total))
-            .map((c) => [c.categoryName, formatMoney(c.total, currencySummary.currency)]),
-          ["Total spend this month", formatMoney(currencySummary.monthTotalSpend, currencySummary.currency)],
+            .map((c) => [c.categoryName, formatValue(Number(c.total))]),
+          [
+            "Total spend this month",
+            isPercentage ? "100%" : formatMoney(currencySummary.monthTotalSpend, currencySummary.currency),
+          ],
         ],
         { boldLastRow: true },
       );

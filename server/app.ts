@@ -7,6 +7,7 @@ import { requireAuth } from "./middleware/requireAuth";
 import { withUserContext } from "./middleware/withUserContext";
 import { categoriesRouter } from "./routes/categories";
 import { expensesRouter } from "./routes/expenses";
+import { incomeRouter } from "./routes/income";
 import { loansRouter } from "./routes/loans";
 import { savingsAccountsRouter } from "./routes/savingsAccounts";
 import { assetsRouter } from "./routes/assets";
@@ -34,6 +35,7 @@ export function createApp() {
   api.use(requireAuth, withUserContext);
   api.use("/categories", categoriesRouter);
   api.use("/expenses", expensesRouter);
+  api.use("/income", incomeRouter);
   api.use("/loans", loansRouter);
   api.use("/savings-accounts", savingsAccountsRouter);
   api.use("/assets", assetsRouter);

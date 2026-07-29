@@ -15,6 +15,7 @@ export default function NavBar() {
 
   const navLinks = [
     { to: "/", label: t("nav.dashboard") },
+    { to: "/income", label: t("nav.income") },
     { to: "/expenses", label: t("nav.expenses") },
     { to: "/loans", label: t("nav.loans") },
     { to: "/savings", label: t("nav.savings") },

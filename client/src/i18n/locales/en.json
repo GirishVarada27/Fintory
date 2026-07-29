@@ -9,6 +9,7 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "income": "Income",
     "expenses": "Expenses",
     "loans": "Loans",
     "savings": "Savings",

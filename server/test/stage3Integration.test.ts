@@ -77,6 +77,7 @@ describe("audit log", () => {
 describe("receipt scan review-and-confirm flow", () => {
   let agent: ReturnType<typeof request.agent>;
   let email: string;
+  let uploadedReceiptUrl: string | undefined;
 
   beforeAll(async () => {
     const result = await signUpAndLogin("receipt-scan");
@@ -85,6 +86,23 @@ describe("receipt scan review-and-confirm flow", () => {
   });
 
   afterAll(async () => {
+    // When R2 is configured, the scan actually uploads to the real bucket —
+    // clean that up too, not just the test user, so runs don't accumulate
+    // orphaned objects there.
+    if (uploadedReceiptUrl?.includes(".r2.cloudflarestorage.com/")) {
+      const { S3Client, DeleteObjectCommand } = await import("@aws-sdk/client-s3");
+      const key = new URL(uploadedReceiptUrl).pathname.split("/").slice(2).join("/");
+      const client = new S3Client({
+        region: "auto",
+        endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+        credentials: {
+          accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+          secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+        },
+      });
+      await client.send(new DeleteObjectCommand({ Bucket: process.env.R2_BUCKET, Key: key }));
+    }
+
     const userId = await getUserIdByEmail(email);
     await deleteTestUser(userId);
   });
@@ -125,7 +143,10 @@ describe("receipt scan review-and-confirm flow", () => {
     expect(scanRes.status).toBe(200);
     expect(scanRes.body.data.extracted.vendor).toBe("Test Cafe");
     expect(scanRes.body.data.extracted.amount).toBe(9.5);
-    expect(scanRes.body.data.receiptUrl).toMatch(/^data:image\/png;base64,/);
+    // Storage backend (R2 vs. the base64 data: URL fallback) depends on
+    // whether R2_* env vars are configured in whatever environment runs this
+    // test — not what this test is actually verifying, so accept either.
+    expect(scanRes.body.data.receiptUrl).toMatch(/^(data:image\/png;base64,|https:\/\/.+\.r2\.cloudflarestorage\.com\/)/);
 
     // Nothing should exist yet — the scan only returns a proposal.
     const listBefore = await agent.get("/api/v1/expenses?vendor=Test Cafe");
@@ -133,6 +154,7 @@ describe("receipt scan review-and-confirm flow", () => {
 
     // The user reviews/edits, then explicitly confirms via the normal create flow.
     const { receiptUrl, extracted } = scanRes.body.data;
+    uploadedReceiptUrl = receiptUrl;
     const createRes = await agent.post("/api/v1/expenses").send({
       amount: extracted.amount,
       currency: extracted.currency,

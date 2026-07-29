@@ -188,6 +188,46 @@ export const expenses = pgTable(
   ],
 ).enableRLS();
 
+// Deliberately simpler than expenses (no categories/splits/receipts/tags) —
+// this exists to power net income and cash-flow reporting, not a full
+// income-tracking feature in its own right.
+export const income = pgTable(
+  "income",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    amount: numeric("amount", { precision: 14, scale: 4 }).notNull(),
+    currency: varchar("currency", { length: 3 }).notNull(),
+    source: text("source").notNull(),
+    date: date("date").notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("income_user_date_idx").on(t.userId, t.date),
+    pgPolicy("income_rls_policy", {
+      for: "all",
+      to: "public",
+      using: sql`${t.userId} = ${CURRENT_USER}`,
+      withCheck: sql`${t.userId} = ${CURRENT_USER}`,
+    }),
+    pgPolicy("income_shared_select_policy", {
+      for: "select",
+      to: "public",
+      using: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted')`,
+    }),
+    pgPolicy("income_shared_write_policy", {
+      for: "all",
+      to: "public",
+      using: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted' AND account_shares.permission = 'edit')`,
+      withCheck: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted' AND account_shares.permission = 'edit')`,
+    }),
+  ],
+).enableRLS();
+
 export const loans = pgTable(
   "loans",
   {
@@ -522,7 +562,7 @@ export const linkedTransactions = pgTable(
 ).enableRLS();
 
 export const auditActionEnum = pgEnum("audit_action", ["create", "update", "delete"]);
-export const auditEntityEnum = pgEnum("audit_entity_type", ["expense", "loan", "savings_account", "asset"]);
+export const auditEntityEnum = pgEnum("audit_entity_type", ["expense", "loan", "savings_account", "asset", "income"]);
 
 export const auditLog = pgTable(
   "audit_log",
