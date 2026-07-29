@@ -97,12 +97,13 @@ export default function SavingsAccounts() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">Savings</h1>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Savings</h1>
 
       <form onSubmit={handleSubmit} className={`grid grid-cols-1 gap-3 sm:grid-cols-4 ${cardClass}`}>
         <div>
-          <label className={labelClass}>Name</label>
+          <label htmlFor="savings-name" className={labelClass}>Name</label>
           <input
+            id="savings-name"
             type="text"
             required
             value={form.name}
@@ -111,8 +112,9 @@ export default function SavingsAccounts() {
           />
         </div>
         <div>
-          <label className={labelClass}>Institution</label>
+          <label htmlFor="savings-institution" className={labelClass}>Institution</label>
           <input
+            id="savings-institution"
             type="text"
             value={form.institution}
             onChange={(e) => setForm({ ...form, institution: e.target.value })}
@@ -120,8 +122,9 @@ export default function SavingsAccounts() {
           />
         </div>
         <div>
-          <label className={labelClass}>Type</label>
+          <label htmlFor="savings-type" className={labelClass}>Type</label>
           <input
+            id="savings-type"
             type="text"
             placeholder="high-yield, checking, ..."
             value={form.type}
@@ -130,8 +133,9 @@ export default function SavingsAccounts() {
           />
         </div>
         <div>
-          <label className={labelClass}>Currency</label>
+          <label htmlFor="savings-currency" className={labelClass}>Currency</label>
           <input
+            id="savings-currency"
             type="text"
             required
             maxLength={3}
@@ -141,8 +145,9 @@ export default function SavingsAccounts() {
           />
         </div>
         <div>
-          <label className={labelClass}>Balance</label>
+          <label htmlFor="savings-balance" className={labelClass}>Balance</label>
           <input
+            id="savings-balance"
             type="number"
             step="0.01"
             min="0"
@@ -153,8 +158,9 @@ export default function SavingsAccounts() {
           />
         </div>
         <div>
-          <label className={labelClass}>Target amount</label>
+          <label htmlFor="savings-target" className={labelClass}>Target amount</label>
           <input
+            id="savings-target"
             type="number"
             step="0.01"
             min="0"
@@ -164,8 +170,9 @@ export default function SavingsAccounts() {
           />
         </div>
         <div>
-          <label className={labelClass}>APY %</label>
+          <label htmlFor="savings-apy" className={labelClass}>APY %</label>
           <input
+            id="savings-apy"
             type="number"
             step="0.001"
             min="0"
@@ -176,8 +183,9 @@ export default function SavingsAccounts() {
           />
         </div>
         <div>
-          <label className={labelClass}>Monthly contribution</label>
+          <label htmlFor="savings-contribution" className={labelClass}>Monthly contribution</label>
           <input
+            id="savings-contribution"
             type="number"
             step="0.01"
             min="0"
@@ -200,18 +208,18 @@ export default function SavingsAccounts() {
       </form>
 
       {loading ? (
-        <p className="text-slate-400">Loading…</p>
+        <p className="text-slate-600 dark:text-slate-400">Loading…</p>
       ) : accounts.length === 0 ? (
-        <p className="text-slate-400">No savings accounts yet.</p>
+        <p className="text-slate-600 dark:text-slate-400">No savings accounts yet.</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {accounts.map((account) => (
             <div key={account.id} className={cardClass}>
-              <h2 className="font-semibold text-white">{account.name}</h2>
-              {account.institution && <p className="text-xs text-slate-400">{account.institution}</p>}
-              <dl className="mt-2 grid grid-cols-2 gap-y-1 text-sm text-slate-300">
+              <h2 className="font-semibold text-slate-900 dark:text-white">{account.name}</h2>
+              {account.institution && <p className="text-xs text-slate-600 dark:text-slate-400">{account.institution}</p>}
+              <dl className="mt-2 grid grid-cols-2 gap-y-1 text-sm text-slate-700 dark:text-slate-300">
                 <dt className="text-slate-500">Balance</dt>
-                <dd className="text-right font-medium text-white">
+                <dd className="text-right font-medium text-slate-900 dark:text-white">
                   {account.balance} {account.currency}
                 </dd>
                 {account.targetAmount && (
@@ -230,10 +238,18 @@ export default function SavingsAccounts() {
                 )}
               </dl>
               <div className="mt-3 flex gap-3 text-sm">
-                <button onClick={() => startEdit(account)} className="text-fuchsia-400 hover:underline">
+                <button
+                  onClick={() => startEdit(account)}
+                  aria-label={`Edit ${account.name}`}
+                  className="text-fuchsia-600 dark:text-fuchsia-400 hover:underline"
+                >
                   Edit
                 </button>
-                <button onClick={() => handleDelete(account.id)} className="text-rose-400 hover:underline">
+                <button
+                  onClick={() => handleDelete(account.id)}
+                  aria-label={`Delete ${account.name}`}
+                  className="text-rose-600 dark:text-rose-400 hover:underline"
+                >
                   Delete
                 </button>
               </div>

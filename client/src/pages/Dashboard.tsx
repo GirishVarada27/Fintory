@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getDashboardSummary, type DashboardSummary } from "../api/dashboard";
 import { cardClass, secondaryButtonClass } from "../lib/ui";
 
 export default function Dashboard() {
+  const { t } = useTranslation();
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -13,42 +15,42 @@ export default function Dashboard() {
     });
   }, []);
 
-  if (loading) return <p className="text-slate-400">Loading…</p>;
+  if (loading) return <p className="text-slate-600 dark:text-slate-400">{t("common.loading")}</p>;
   if (!summary) return null;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-          <p className="text-sm text-slate-400">{summary.month}</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{t("dashboard.title")}</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400">{summary.month}</p>
         </div>
         <a href={`/api/v1/export/report.pdf?month=${summary.month}`} className={secondaryButtonClass}>
-          Export PDF report
+          {t("dashboard.exportPdf")}
         </a>
       </div>
 
       <div className={cardClass}>
         <div className="mb-1 flex items-center gap-2">
-          <h2 className="text-lg font-semibold text-white">Converted total</h2>
-          <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-slate-300">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{t("dashboard.convertedTotal")}</h2>
+          <span className="rounded-full bg-black/5 dark:bg-white/10 px-2 py-0.5 text-xs text-slate-700 dark:text-slate-300">
             {summary.converted.currency}
           </span>
         </div>
         {summary.converted.unavailable ? (
-          <p className="text-sm text-amber-400">{summary.converted.note}</p>
+          <p className="text-sm text-amber-600 dark:text-amber-400">{summary.converted.note}</p>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-xl bg-gradient-to-br from-fuchsia-500/10 to-violet-500/10 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-400">This month's spend</p>
-                <p className="mt-1 text-2xl font-bold text-white">
+                <p className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{t("dashboard.monthSpend")}</p>
+                <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
                   {summary.converted.monthTotalSpend} {summary.converted.currency}
                 </p>
               </div>
               <div className="rounded-xl bg-gradient-to-br from-cyan-500/10 to-emerald-500/10 p-4">
-                <p className="text-xs uppercase tracking-wide text-slate-400">Net worth</p>
-                <p className="mt-1 text-2xl font-bold text-white">
+                <p className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{t("dashboard.netWorth")}</p>
+                <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
                   {summary.converted.netWorth} {summary.converted.currency}
                 </p>
               </div>
@@ -58,33 +60,50 @@ export default function Dashboard() {
         )}
       </div>
 
+      {summary.insights.length > 0 && (
+        <div className={cardClass}>
+          <h2 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">{t("dashboard.insights")}</h2>
+          <ul className="space-y-2">
+            {summary.insights.map((insight) => (
+              <li
+                key={`${insight.currency}-${insight.categoryName}`}
+                className="flex items-start gap-2 text-sm text-slate-700 dark:text-slate-300"
+              >
+                <span aria-hidden="true">{insight.direction === "up" ? "📈" : "📉"}</span>
+                <span>{insight.message}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {summary.byCurrency.length === 0 ? (
-        <p className="text-slate-400">Add some expenses, savings, or assets to see your dashboard.</p>
+        <p className="text-slate-600 dark:text-slate-400">{t("dashboard.empty")}</p>
       ) : (
         <div>
-          <h2 className="mb-3 text-sm uppercase tracking-wide text-slate-500">Native per-currency breakdown</h2>
+          <h2 className="mb-3 text-sm uppercase tracking-wide text-slate-500">{t("dashboard.nativeBreakdown")}</h2>
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {summary.byCurrency.map((c) => (
               <div key={c.currency} className={cardClass}>
-                <h3 className="mb-4 text-lg font-semibold text-white">{c.currency}</h3>
+                <h3 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">{c.currency}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="rounded-xl bg-gradient-to-br from-fuchsia-500/10 to-violet-500/10 p-4">
-                    <p className="text-xs uppercase tracking-wide text-slate-400">This month's spend</p>
-                    <p className="mt-1 text-2xl font-bold text-white">
+                    <p className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{t("dashboard.monthSpend")}</p>
+                    <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
                       {c.monthTotalSpend} {c.currency}
                     </p>
                   </div>
                   <div className="rounded-xl bg-gradient-to-br from-cyan-500/10 to-emerald-500/10 p-4">
-                    <p className="text-xs uppercase tracking-wide text-slate-400">Net worth</p>
-                    <p className="mt-1 text-2xl font-bold text-white">
+                    <p className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{t("dashboard.netWorth")}</p>
+                    <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
                       {c.netWorth} {c.currency}
                     </p>
                   </div>
                 </div>
                 {c.categoryBreakdown.length > 0 && (
                   <div className="mt-4">
-                    <p className="mb-2 text-xs uppercase tracking-wide text-slate-400">Category breakdown</p>
-                    <ul className="space-y-1 text-sm text-slate-300">
+                    <p className="mb-2 text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{t("dashboard.categoryBreakdown")}</p>
+                    <ul className="space-y-1 text-sm text-slate-700 dark:text-slate-300">
                       {c.categoryBreakdown
                         .slice()
                         .sort((a, b) => Number(b.total) - Number(a.total))

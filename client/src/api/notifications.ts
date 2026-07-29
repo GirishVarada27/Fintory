@@ -3,8 +3,8 @@ import { api, type ItemResponse } from "./client";
 export interface Notification {
   id: string;
   userId: string;
-  type: "budget_threshold" | "recurring_detected" | "loan_reminder";
-  payload: Record<string, string | number>;
+  type: "budget_threshold" | "recurring_detected" | "loan_reminder" | "anomaly_detected";
+  payload: Record<string, string | number | string[]>;
   sentAt: string | null;
   readAt: string | null;
   createdAt: string;

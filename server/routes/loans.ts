@@ -8,10 +8,11 @@ import {
 } from "../../shared/schemas/loans";
 import type { PaginationQuery } from "../../shared/schemas/common";
 import { validateBody, validateQuery } from "../middleware/validate";
-import { notFound } from "../lib/errors";
+import { notFound, sendError } from "../lib/errors";
 import { cursorCondition, decodeCursor, encodeCursor } from "../lib/pagination";
 import { computeLoanAmortization } from "../../shared/amortization";
 import { writeAuditLog } from "../lib/auditLog";
+import { resolveViewContext } from "../lib/viewContext";
 
 export const loansRouter = Router();
 
@@ -27,10 +28,12 @@ function withComputed<T extends typeof loans.$inferSelect>(loan: T) {
 }
 
 loansRouter.get("/", validateQuery(listLoansQuerySchema), async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
   const query = req.validatedQuery as PaginationQuery;
   const cursor = decodeCursor(query.cursor);
 
-  const conditions = [eq(loans.userId, req.user!.id)];
+  const conditions = [eq(loans.userId, view.ownerId)];
   const cursorClause = cursorCondition(loans.createdAt, loans.id, cursor);
   if (cursorClause) conditions.push(cursorClause);
 
@@ -51,10 +54,12 @@ loansRouter.get("/", validateQuery(listLoansQuerySchema), async (req, res) => {
 });
 
 loansRouter.get("/:id", async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
   const [row] = await req.db
     .select()
     .from(loans)
-    .where(and(eq(loans.id, req.params.id as string), eq(loans.userId, req.user!.id)));
+    .where(and(eq(loans.id, req.params.id as string), eq(loans.userId, view.ownerId)));
   if (!row) {
     notFound(res);
     return;
@@ -63,6 +68,13 @@ loansRouter.get("/:id", async (req, res) => {
 });
 
 loansRouter.post("/", validateBody(createLoanSchema), async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
+  if (!view.canEdit) {
+    sendError(res, 403, "FORBIDDEN", "You only have view access to this account");
+    return;
+  }
+
   const [row] = await req.db
     .insert(loans)
     .values({
@@ -70,16 +82,23 @@ loansRouter.post("/", validateBody(createLoanSchema), async (req, res) => {
       principal: String(req.body.principal),
       apr: String(req.body.apr),
       monthlyPayment: String(req.body.monthlyPayment),
-      userId: req.user!.id,
+      userId: view.ownerId,
     })
     .returning();
 
-  await writeAuditLog(req.db, req.user!.id, "loan", row.id, "create", null, row);
+  await writeAuditLog(req.db, view.ownerId, "loan", row.id, "create", null, row);
 
   res.status(201).json({ data: withComputed(row) });
 });
 
 loansRouter.patch("/:id", validateBody(updateLoanSchema), async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
+  if (!view.canEdit) {
+    sendError(res, 403, "FORBIDDEN", "You only have view access to this account");
+    return;
+  }
+
   const loanId = req.params.id as string;
   const updates = { ...req.body } as Record<string, unknown>;
   if (typeof updates.principal === "number") updates.principal = String(updates.principal);
@@ -90,7 +109,7 @@ loansRouter.patch("/:id", validateBody(updateLoanSchema), async (req, res) => {
   const [existing] = await req.db
     .select()
     .from(loans)
-    .where(and(eq(loans.id, loanId), eq(loans.userId, req.user!.id)));
+    .where(and(eq(loans.id, loanId), eq(loans.userId, view.ownerId)));
   if (!existing) {
     notFound(res);
     return;
@@ -99,29 +118,36 @@ loansRouter.patch("/:id", validateBody(updateLoanSchema), async (req, res) => {
   const [row] = await req.db
     .update(loans)
     .set(updates)
-    .where(and(eq(loans.id, loanId), eq(loans.userId, req.user!.id)))
+    .where(and(eq(loans.id, loanId), eq(loans.userId, view.ownerId)))
     .returning();
   if (!row) {
     notFound(res);
     return;
   }
 
-  await writeAuditLog(req.db, req.user!.id, "loan", row.id, "update", existing, row);
+  await writeAuditLog(req.db, view.ownerId, "loan", row.id, "update", existing, row);
 
   res.json({ data: withComputed(row) });
 });
 
 loansRouter.delete("/:id", async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
+  if (!view.canEdit) {
+    sendError(res, 403, "FORBIDDEN", "You only have view access to this account");
+    return;
+  }
+
   const [row] = await req.db
     .delete(loans)
-    .where(and(eq(loans.id, req.params.id as string), eq(loans.userId, req.user!.id)))
+    .where(and(eq(loans.id, req.params.id as string), eq(loans.userId, view.ownerId)))
     .returning();
   if (!row) {
     notFound(res);
     return;
   }
 
-  await writeAuditLog(req.db, req.user!.id, "loan", row.id, "delete", row, null);
+  await writeAuditLog(req.db, view.ownerId, "loan", row.id, "delete", row, null);
 
   res.status(204).send();
 });

@@ -10,6 +10,10 @@ function describeNotification(n: Notification): string {
       return `Possible subscription detected: ${p.vendor}`;
     case "loan_reminder":
       return `Payment due ${p.dueDate}: ${p.lender}`;
+    case "anomaly_detected":
+      return p.anomalyType === "duplicate"
+        ? `Possible duplicate: ${p.vendor} (${p.amount} ${p.currency}) on ${p.date}`
+        : `Unusual charge: ${p.vendor} billed ${p.amount} ${p.currency}, typically ~${p.typicalAmount} ${p.currency}`;
     default:
       return "Notification";
   }
@@ -41,8 +45,10 @@ export default function NotificationBell() {
     <div className="relative">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="relative rounded-full px-3 py-1.5 text-sm text-slate-300 transition hover:bg-white/10 hover:text-white"
+        className="relative rounded-full px-3 py-1.5 text-sm text-slate-700 dark:text-slate-300 transition hover:bg-black/5 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white"
         aria-label="Notifications"
+        aria-haspopup="true"
+        aria-expanded={open}
       >
         🔔
         {unreadCount > 0 && (
@@ -52,21 +58,21 @@ export default function NotificationBell() {
         )}
       </button>
       {open && (
-        <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-white/10 bg-slate-900 p-2 shadow-xl">
+        <div className="absolute right-0 z-20 mt-2 w-80 rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-slate-900 p-2 shadow-xl">
           {notifications.length === 0 ? (
-            <p className="p-3 text-sm text-slate-400">No notifications yet.</p>
+            <p className="p-3 text-sm text-slate-600 dark:text-slate-400">No notifications yet.</p>
           ) : (
             <ul className="max-h-96 space-y-1 overflow-y-auto">
               {notifications.map((n) => (
                 <li
                   key={n.id}
-                  className={`rounded-lg p-2 text-sm ${n.readAt ? "text-slate-400" : "bg-white/5 text-white"}`}
+                  className={`rounded-lg p-2 text-sm ${n.readAt ? "text-slate-600 dark:text-slate-400" : "bg-black/5 dark:bg-white/5 text-slate-900 dark:text-white"}`}
                 >
                   <p>{describeNotification(n)}</p>
                   <div className="mt-1 flex items-center justify-between text-xs text-slate-500">
                     <span>{new Date(n.createdAt).toLocaleString()}</span>
                     {!n.readAt && (
-                      <button onClick={() => handleMarkRead(n.id)} className="text-fuchsia-400 hover:underline">
+                      <button onClick={() => handleMarkRead(n.id)} className="text-fuchsia-600 dark:text-fuchsia-400 hover:underline">
                         Mark read
                       </button>
                     )}

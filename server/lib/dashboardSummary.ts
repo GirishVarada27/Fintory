@@ -3,15 +3,37 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { assets, categories, expenses, loans, savingsAccounts, user as userTable } from "../db/schema";
 import type * as schema from "../db/schema";
 import { computeLoanAmortization } from "../../shared/amortization";
-import { getCategorySpend } from "./categorySpend";
-import { monthRange } from "./dateRange";
+import { getCategorySpend, type CategorySpendRow } from "./categorySpend";
+import { monthRange, previousMonthOf } from "./dateRange";
 import { convertOnDate } from "./fx";
+import { computeSpendingInsights, type SpendingInsight } from "./insights";
+
+export interface CategoryTotal {
+  categoryName: string;
+  total: string;
+}
 
 export interface CurrencySummary {
   currency: string;
   monthTotalSpend: string;
-  categoryBreakdown: { categoryName: string; total: string }[];
+  categoryBreakdown: CategoryTotal[];
   netWorth: string;
+}
+
+function buildCategoryBreakdown(
+  spendRows: CategorySpendRow[],
+  currency: string,
+  categoryNameById: Map<string, string>,
+): CategoryTotal[] {
+  const breakdownMap = new Map<string, number>();
+  for (const r of spendRows.filter((row) => row.currency === currency)) {
+    const key = r.categoryId ? (categoryNameById.get(r.categoryId) ?? "Uncategorized") : "Uncategorized";
+    breakdownMap.set(key, (breakdownMap.get(key) ?? 0) + r.amount);
+  }
+  return Array.from(breakdownMap.entries()).map(([categoryName, total]) => ({
+    categoryName,
+    total: total.toFixed(2),
+  }));
 }
 
 export interface ConvertedSummary {
@@ -26,6 +48,7 @@ export interface DashboardSummaryData {
   month: string;
   byCurrency: CurrencySummary[];
   converted: ConvertedSummary;
+  insights: SpendingInsight[];
 }
 
 function outstandingPrincipalOf(loan: {
@@ -55,6 +78,8 @@ export async function computeDashboardSummary(
   // connection, which can't actually run queries concurrently anyway — doing
   // so trips node-postgres's "query already in progress" deprecation warning.
   const spendRows = await getCategorySpend(tx, userId, start, end);
+  const prevRange = monthRange(previousMonthOf(month));
+  const prevSpendRows = await getCategorySpend(tx, userId, prevRange.start, prevRange.end);
   const allCategories = await tx.select().from(categories);
   const allAssets = await tx.select().from(assets).where(eq(assets.userId, userId));
   const allSavings = await tx.select().from(savingsAccounts).where(eq(savingsAccounts.userId, userId));
@@ -82,16 +107,7 @@ export async function computeDashboardSummary(
   const byCurrency: CurrencySummary[] = Array.from(currencies).map((currency) => {
     const currencySpend = spendRows.filter((r) => r.currency === currency);
     const monthTotalSpend = currencySpend.reduce((sum, r) => sum + r.amount, 0);
-
-    const breakdownMap = new Map<string, number>();
-    for (const r of currencySpend) {
-      const key = r.categoryId ? (categoryNameById.get(r.categoryId) ?? "Uncategorized") : "Uncategorized";
-      breakdownMap.set(key, (breakdownMap.get(key) ?? 0) + r.amount);
-    }
-    const categoryBreakdown = Array.from(breakdownMap.entries()).map(([categoryName, total]) => ({
-      categoryName,
-      total: total.toFixed(2),
-    }));
+    const categoryBreakdown = buildCategoryBreakdown(spendRows, currency, categoryNameById);
 
     const assetsTotal = allAssets
       .filter((a) => a.currency === currency)
@@ -110,6 +126,17 @@ export async function computeDashboardSummary(
       netWorth: (assetsTotal + savingsTotal - loansOutstanding).toFixed(2),
     };
   });
+
+  const insights: SpendingInsight[] = Array.from(currencies)
+    .flatMap((currency) =>
+      computeSpendingInsights(
+        buildCategoryBreakdown(spendRows, currency, categoryNameById),
+        buildCategoryBreakdown(prevSpendRows, currency, categoryNameById),
+        currency,
+      ),
+    )
+    .sort((a, b) => b.percentChange - a.percentChange)
+    .slice(0, 5);
 
   const displayCurrency = userRow?.defaultDisplayCurrency ?? "USD";
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -146,5 +173,5 @@ export async function computeDashboardSummary(
     unavailable: conversionFailed,
   };
 
-  return { month, byCurrency, converted };
+  return { month, byCurrency, converted, insights };
 }

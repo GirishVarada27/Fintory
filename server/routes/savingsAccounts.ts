@@ -8,9 +8,10 @@ import {
 } from "../../shared/schemas/savingsAccounts";
 import type { PaginationQuery } from "../../shared/schemas/common";
 import { validateBody, validateQuery } from "../middleware/validate";
-import { notFound } from "../lib/errors";
+import { notFound, sendError } from "../lib/errors";
 import { cursorCondition, decodeCursor, encodeCursor } from "../lib/pagination";
 import { writeAuditLog } from "../lib/auditLog";
+import { resolveViewContext } from "../lib/viewContext";
 
 export const savingsAccountsRouter = Router();
 
@@ -28,10 +29,12 @@ function stringifyMoney<T extends Record<string, unknown>>(body: T): T {
 }
 
 savingsAccountsRouter.get("/", validateQuery(listSavingsAccountsQuerySchema), async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
   const query = req.validatedQuery as PaginationQuery;
   const cursor = decodeCursor(query.cursor);
 
-  const conditions = [eq(savingsAccounts.userId, req.user!.id)];
+  const conditions = [eq(savingsAccounts.userId, view.ownerId)];
   const cursorClause = cursorCondition(savingsAccounts.createdAt, savingsAccounts.id, cursor);
   if (cursorClause) conditions.push(cursorClause);
 
@@ -52,10 +55,12 @@ savingsAccountsRouter.get("/", validateQuery(listSavingsAccountsQuerySchema), as
 });
 
 savingsAccountsRouter.get("/:id", async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
   const [row] = await req.db
     .select()
     .from(savingsAccounts)
-    .where(and(eq(savingsAccounts.id, req.params.id as string), eq(savingsAccounts.userId, req.user!.id)));
+    .where(and(eq(savingsAccounts.id, req.params.id as string), eq(savingsAccounts.userId, view.ownerId)));
   if (!row) {
     notFound(res);
     return;
@@ -64,24 +69,38 @@ savingsAccountsRouter.get("/:id", async (req, res) => {
 });
 
 savingsAccountsRouter.post("/", validateBody(createSavingsAccountSchema), async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
+  if (!view.canEdit) {
+    sendError(res, 403, "FORBIDDEN", "You only have view access to this account");
+    return;
+  }
+
   const [row] = await req.db
     .insert(savingsAccounts)
-    .values({ ...stringifyMoney(req.body), userId: req.user!.id })
+    .values({ ...stringifyMoney(req.body), userId: view.ownerId })
     .returning();
 
-  await writeAuditLog(req.db, req.user!.id, "savings_account", row.id, "create", null, row);
+  await writeAuditLog(req.db, view.ownerId, "savings_account", row.id, "create", null, row);
 
   res.status(201).json({ data: row });
 });
 
 savingsAccountsRouter.patch("/:id", validateBody(updateSavingsAccountSchema), async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
+  if (!view.canEdit) {
+    sendError(res, 403, "FORBIDDEN", "You only have view access to this account");
+    return;
+  }
+
   const accountId = req.params.id as string;
   const updates = { ...stringifyMoney(req.body), updatedAt: new Date() };
 
   const [existing] = await req.db
     .select()
     .from(savingsAccounts)
-    .where(and(eq(savingsAccounts.id, accountId), eq(savingsAccounts.userId, req.user!.id)));
+    .where(and(eq(savingsAccounts.id, accountId), eq(savingsAccounts.userId, view.ownerId)));
   if (!existing) {
     notFound(res);
     return;
@@ -90,29 +109,36 @@ savingsAccountsRouter.patch("/:id", validateBody(updateSavingsAccountSchema), as
   const [row] = await req.db
     .update(savingsAccounts)
     .set(updates)
-    .where(and(eq(savingsAccounts.id, accountId), eq(savingsAccounts.userId, req.user!.id)))
+    .where(and(eq(savingsAccounts.id, accountId), eq(savingsAccounts.userId, view.ownerId)))
     .returning();
   if (!row) {
     notFound(res);
     return;
   }
 
-  await writeAuditLog(req.db, req.user!.id, "savings_account", row.id, "update", existing, row);
+  await writeAuditLog(req.db, view.ownerId, "savings_account", row.id, "update", existing, row);
 
   res.json({ data: row });
 });
 
 savingsAccountsRouter.delete("/:id", async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
+  if (!view.canEdit) {
+    sendError(res, 403, "FORBIDDEN", "You only have view access to this account");
+    return;
+  }
+
   const [row] = await req.db
     .delete(savingsAccounts)
-    .where(and(eq(savingsAccounts.id, req.params.id as string), eq(savingsAccounts.userId, req.user!.id)))
+    .where(and(eq(savingsAccounts.id, req.params.id as string), eq(savingsAccounts.userId, view.ownerId)))
     .returning();
   if (!row) {
     notFound(res);
     return;
   }
 
-  await writeAuditLog(req.db, req.user!.id, "savings_account", row.id, "delete", row, null);
+  await writeAuditLog(req.db, view.ownerId, "savings_account", row.id, "delete", row, null);
 
   res.status(204).send();
 });

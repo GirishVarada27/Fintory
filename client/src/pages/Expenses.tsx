@@ -234,7 +234,7 @@ export default function Expenses() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">Expenses</h1>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Expenses</h1>
 
       <form onSubmit={handleSubmit} className={`grid grid-cols-1 gap-3 sm:grid-cols-6 ${cardClass}`}>
         <div className="sm:col-span-6 flex items-center gap-3">
@@ -250,11 +250,12 @@ export default function Expenses() {
           <label htmlFor="receipt-scan-input" className={`cursor-pointer ${secondaryButtonClass}`}>
             {scanning ? "Scanning…" : "Scan a receipt"}
           </label>
-          {scanNote && <p className="text-xs text-slate-400">{scanNote}</p>}
+          {scanNote && <p className="text-xs text-slate-600 dark:text-slate-400">{scanNote}</p>}
         </div>
         <div>
-          <label className={labelClass}>Amount</label>
+          <label htmlFor="expense-amount" className={labelClass}>Amount</label>
           <input
+            id="expense-amount"
             type="number"
             step="0.01"
             min="0.01"
@@ -265,8 +266,9 @@ export default function Expenses() {
           />
         </div>
         <div>
-          <label className={labelClass}>Currency</label>
+          <label htmlFor="expense-currency" className={labelClass}>Currency</label>
           <input
+            id="expense-currency"
             type="text"
             required
             maxLength={3}
@@ -276,8 +278,9 @@ export default function Expenses() {
           />
         </div>
         <div className="sm:col-span-2">
-          <label className={labelClass}>Vendor</label>
+          <label htmlFor="expense-vendor" className={labelClass}>Vendor</label>
           <input
+            id="expense-vendor"
             type="text"
             required
             value={form.vendor}
@@ -286,8 +289,9 @@ export default function Expenses() {
           />
         </div>
         <div>
-          <label className={labelClass}>Date</label>
+          <label htmlFor="expense-date" className={labelClass}>Date</label>
           <input
+            id="expense-date"
             type="date"
             required
             value={form.date}
@@ -296,7 +300,7 @@ export default function Expenses() {
           />
         </div>
         <div className="flex items-end pb-1">
-          <label className="flex items-center gap-2 text-sm text-slate-300">
+          <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
             <input type="checkbox" checked={form.splitMode} onChange={toggleSplitMode} />
             Split across categories
           </label>
@@ -304,8 +308,9 @@ export default function Expenses() {
 
         {!form.splitMode && (
           <div>
-            <label className={labelClass}>Category</label>
+            <label htmlFor="expense-category" className={labelClass}>Category</label>
             <select
+              id="expense-category"
               value={form.categoryId}
               onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
               className={inputClass}
@@ -326,6 +331,7 @@ export default function Expenses() {
             {form.splits.map((split, index) => (
               <div key={index} className="flex gap-2">
                 <select
+                  aria-label={`Split ${index + 1} category`}
                   value={split.categoryId}
                   onChange={(e) => updateSplitRow(index, "categoryId", e.target.value)}
                   className={`${inputClass} flex-1`}
@@ -341,6 +347,7 @@ export default function Expenses() {
                   type="number"
                   step="0.01"
                   placeholder="Amount"
+                  aria-label={`Split ${index + 1} amount`}
                   value={split.amount}
                   onChange={(e) => updateSplitRow(index, "amount", e.target.value)}
                   className={`${inputClass} w-32`}
@@ -349,7 +356,7 @@ export default function Expenses() {
                   <button
                     type="button"
                     onClick={() => removeSplitRow(index)}
-                    className="text-rose-400 hover:underline"
+                    className="text-rose-600 dark:text-rose-400 hover:underline"
                   >
                     Remove
                   </button>
@@ -363,8 +370,9 @@ export default function Expenses() {
         )}
 
         <div className="sm:col-span-3">
-          <label className={labelClass}>Tags (comma separated)</label>
+          <label htmlFor="expense-tags" className={labelClass}>Tags (comma separated)</label>
           <input
+            id="expense-tags"
             type="text"
             placeholder="work, reimbursable"
             value={form.tagsInput}
@@ -373,8 +381,9 @@ export default function Expenses() {
           />
         </div>
         <div className="sm:col-span-3">
-          <label className={labelClass}>Notes</label>
+          <label htmlFor="expense-notes" className={labelClass}>Notes</label>
           <input
+            id="expense-notes"
             type="text"
             value={form.notes}
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
@@ -398,11 +407,13 @@ export default function Expenses() {
         <input
           type="text"
           placeholder="Vendor"
+          aria-label="Filter by vendor"
           value={filters.vendor}
           onChange={(e) => setFilters({ ...filters, vendor: e.target.value })}
           className={inputClass}
         />
         <select
+          aria-label="Filter by category"
           value={filters.categoryId}
           onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}
           className={inputClass}
@@ -417,6 +428,7 @@ export default function Expenses() {
         <input
           type="text"
           placeholder="Currency"
+          aria-label="Filter by currency"
           maxLength={3}
           value={filters.currency}
           onChange={(e) => setFilters({ ...filters, currency: e.target.value.toUpperCase() })}
@@ -425,6 +437,7 @@ export default function Expenses() {
         <input
           type="number"
           placeholder="Min amount"
+          aria-label="Filter by minimum amount"
           value={filters.minAmount}
           onChange={(e) => setFilters({ ...filters, minAmount: e.target.value })}
           className={inputClass}
@@ -432,23 +445,27 @@ export default function Expenses() {
         <input
           type="number"
           placeholder="Max amount"
+          aria-label="Filter by maximum amount"
           value={filters.maxAmount}
           onChange={(e) => setFilters({ ...filters, maxAmount: e.target.value })}
           className={inputClass}
         />
         <input
           type="date"
+          aria-label="Filter from date"
           value={filters.from}
           onChange={(e) => setFilters({ ...filters, from: e.target.value })}
           className={inputClass}
         />
         <input
           type="date"
+          aria-label="Filter to date"
           value={filters.to}
           onChange={(e) => setFilters({ ...filters, to: e.target.value })}
           className={inputClass}
         />
         <select
+          aria-label="Sort expenses"
           value={`${filters.sortBy}:${filters.sortDir}`}
           onChange={(e) => {
             const [sortBy, sortDir] = e.target.value.split(":") as [typeof filters.sortBy, typeof filters.sortDir];
@@ -474,13 +491,13 @@ export default function Expenses() {
       </div>
 
       {loading ? (
-        <p className="text-slate-400">Loading…</p>
+        <p className="text-slate-600 dark:text-slate-400">Loading…</p>
       ) : expenses.length === 0 ? (
-        <p className="text-slate-400">No expenses match these filters.</p>
+        <p className="text-slate-600 dark:text-slate-400">No expenses match these filters.</p>
       ) : (
         <div className={`overflow-x-auto ${cardClass}`}>
           <table className="w-full text-left text-sm">
-            <thead className="text-slate-400">
+            <thead className="text-slate-600 dark:text-slate-400">
               <tr>
                 <th className="pb-2 pr-2">Date</th>
                 <th className="pb-2 pr-2">Vendor</th>
@@ -490,21 +507,29 @@ export default function Expenses() {
                 <th className="pb-2"></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5 text-slate-200">
+            <tbody className="divide-y divide-white/5 text-slate-800 dark:text-slate-200">
               {expenses.map((expense) => (
                 <tr key={expense.id}>
                   <td className="py-2 pr-2">{expense.date}</td>
                   <td className="py-2 pr-2">{expense.vendor}</td>
                   <td className="py-2 pr-2">{categoryName(expense.categoryId)}</td>
-                  <td className="py-2 pr-2 text-xs text-slate-400">{expense.tags.join(", ")}</td>
+                  <td className="py-2 pr-2 text-xs text-slate-600 dark:text-slate-400">{expense.tags.join(", ")}</td>
                   <td className="py-2 pr-2 text-right">
                     {expense.amount} {expense.currency}
                   </td>
                   <td className="py-2 text-right whitespace-nowrap">
-                    <button onClick={() => startEdit(expense)} className="mr-3 text-fuchsia-400 hover:underline">
+                    <button
+                      onClick={() => startEdit(expense)}
+                      aria-label={`Edit ${expense.vendor} expense`}
+                      className="mr-3 text-fuchsia-600 dark:text-fuchsia-400 hover:underline"
+                    >
                       Edit
                     </button>
-                    <button onClick={() => handleDelete(expense.id)} className="text-rose-400 hover:underline">
+                    <button
+                      onClick={() => handleDelete(expense.id)}
+                      aria-label={`Delete ${expense.vendor} expense`}
+                      className="text-rose-600 dark:text-rose-400 hover:underline"
+                    >
                       Delete
                     </button>
                   </td>

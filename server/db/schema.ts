@@ -125,6 +125,21 @@ export const categories = pgTable(
       to: "public",
       using: sql`${t.userId} = ${CURRENT_USER}`,
     }),
+    // Family sharing (Stage 4): a user who's been granted "accepted" access
+    // to this row's owner can read it; "edit" permission additionally grants
+    // write. Global rows (userId IS NULL) never match — owner_user_id can't
+    // equal NULL — so shared access never reaches default categories.
+    pgPolicy("categories_shared_select_policy", {
+      for: "select",
+      to: "public",
+      using: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted')`,
+    }),
+    pgPolicy("categories_shared_write_policy", {
+      for: "all",
+      to: "public",
+      using: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted' AND account_shares.permission = 'edit')`,
+      withCheck: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted' AND account_shares.permission = 'edit')`,
+    }),
   ],
 ).enableRLS();
 
@@ -159,6 +174,17 @@ export const expenses = pgTable(
       using: sql`${t.userId} = ${CURRENT_USER}`,
       withCheck: sql`${t.userId} = ${CURRENT_USER}`,
     }),
+    pgPolicy("expenses_shared_select_policy", {
+      for: "select",
+      to: "public",
+      using: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted')`,
+    }),
+    pgPolicy("expenses_shared_write_policy", {
+      for: "all",
+      to: "public",
+      using: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted' AND account_shares.permission = 'edit')`,
+      withCheck: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted' AND account_shares.permission = 'edit')`,
+    }),
   ],
 ).enableRLS();
 
@@ -189,6 +215,17 @@ export const loans = pgTable(
       using: sql`${t.userId} = ${CURRENT_USER}`,
       withCheck: sql`${t.userId} = ${CURRENT_USER}`,
     }),
+    pgPolicy("loans_shared_select_policy", {
+      for: "select",
+      to: "public",
+      using: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted')`,
+    }),
+    pgPolicy("loans_shared_write_policy", {
+      for: "all",
+      to: "public",
+      using: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted' AND account_shares.permission = 'edit')`,
+      withCheck: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted' AND account_shares.permission = 'edit')`,
+    }),
   ],
 ).enableRLS();
 
@@ -218,6 +255,17 @@ export const savingsAccounts = pgTable(
       using: sql`${t.userId} = ${CURRENT_USER}`,
       withCheck: sql`${t.userId} = ${CURRENT_USER}`,
     }),
+    pgPolicy("savings_accounts_shared_select_policy", {
+      for: "select",
+      to: "public",
+      using: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted')`,
+    }),
+    pgPolicy("savings_accounts_shared_write_policy", {
+      for: "all",
+      to: "public",
+      using: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted' AND account_shares.permission = 'edit')`,
+      withCheck: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted' AND account_shares.permission = 'edit')`,
+    }),
   ],
 ).enableRLS();
 
@@ -244,6 +292,17 @@ export const assets = pgTable(
       to: "public",
       using: sql`${t.userId} = ${CURRENT_USER}`,
       withCheck: sql`${t.userId} = ${CURRENT_USER}`,
+    }),
+    pgPolicy("assets_shared_select_policy", {
+      for: "select",
+      to: "public",
+      using: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted')`,
+    }),
+    pgPolicy("assets_shared_write_policy", {
+      for: "all",
+      to: "public",
+      using: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted' AND account_shares.permission = 'edit')`,
+      withCheck: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted' AND account_shares.permission = 'edit')`,
     }),
   ],
 ).enableRLS();
@@ -292,6 +351,17 @@ export const budgets = pgTable(
       using: sql`${t.userId} = ${CURRENT_USER}`,
       withCheck: sql`${t.userId} = ${CURRENT_USER}`,
     }),
+    pgPolicy("budgets_shared_select_policy", {
+      for: "select",
+      to: "public",
+      using: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted')`,
+    }),
+    pgPolicy("budgets_shared_write_policy", {
+      for: "all",
+      to: "public",
+      using: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted' AND account_shares.permission = 'edit')`,
+      withCheck: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted' AND account_shares.permission = 'edit')`,
+    }),
   ],
 ).enableRLS();
 
@@ -299,6 +369,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "budget_threshold",
   "recurring_detected",
   "loan_reminder",
+  "anomaly_detected",
 ]);
 
 export const notifications = pgTable(
@@ -480,6 +551,78 @@ export const auditLog = pgTable(
       for: "insert",
       to: "public",
       withCheck: sql`${t.userId} = ${CURRENT_USER}`,
+    }),
+    // A shared editor's writes to the owner's data must still be able to
+    // write an audit entry keyed to the owner (writeAuditLog always logs
+    // under the data's owner, not the actor) — without this, any mutation
+    // made through a shared "edit" grant would fail outright on the log
+    // insert alone, since the plain policy above only allows userId=self.
+    pgPolicy("audit_log_shared_select_policy", {
+      for: "select",
+      to: "public",
+      using: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted')`,
+    }),
+    pgPolicy("audit_log_shared_insert_policy", {
+      for: "insert",
+      to: "public",
+      withCheck: sql`EXISTS (SELECT 1 FROM account_shares WHERE account_shares.owner_user_id = ${t.userId} AND account_shares.shared_with_user_id = ${CURRENT_USER} AND account_shares.status = 'accepted' AND account_shares.permission = 'edit')`,
+    }),
+  ],
+).enableRLS();
+
+// ---------------------------------------------------------------------------
+// Stage 4 — family/shared account visibility. Every business table above
+// carries two extra RLS policies keyed off this table's rows, granting
+// read (any accepted share) or read+write (accepted + "edit" permission) —
+// see e.g. expenses_shared_select_policy / expenses_shared_write_policy.
+// ---------------------------------------------------------------------------
+
+export const sharePermissionEnum = pgEnum("share_permission", ["view", "edit"]);
+export const shareStatusEnum = pgEnum("share_status", ["pending", "accepted"]);
+
+export const accountShares = pgTable(
+  "account_shares",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    ownerUserId: uuid("owner_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    sharedWithUserId: uuid("shared_with_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    permission: sharePermissionEnum("permission").notNull().default("view"),
+    status: shareStatusEnum("status").notNull().default("pending"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex("account_shares_owner_sharee_unique").on(t.ownerUserId, t.sharedWithUserId),
+    index("account_shares_sharee_idx").on(t.sharedWithUserId),
+    // Both parties can see the row (owner to manage it, sharee to see and
+    // accept a pending invite); only the owner can create one; either party
+    // can update (owner changes permission, sharee accepts) or delete (owner
+    // revokes, sharee declines/leaves) — app-level checks narrow exactly
+    // which fields each side may change beyond what RLS expresses here.
+    pgPolicy("account_shares_select_policy", {
+      for: "select",
+      to: "public",
+      using: sql`${t.ownerUserId} = ${CURRENT_USER} OR ${t.sharedWithUserId} = ${CURRENT_USER}`,
+    }),
+    pgPolicy("account_shares_insert_policy", {
+      for: "insert",
+      to: "public",
+      withCheck: sql`${t.ownerUserId} = ${CURRENT_USER}`,
+    }),
+    pgPolicy("account_shares_update_policy", {
+      for: "update",
+      to: "public",
+      using: sql`${t.ownerUserId} = ${CURRENT_USER} OR ${t.sharedWithUserId} = ${CURRENT_USER}`,
+      withCheck: sql`${t.ownerUserId} = ${CURRENT_USER} OR ${t.sharedWithUserId} = ${CURRENT_USER}`,
+    }),
+    pgPolicy("account_shares_delete_policy", {
+      for: "delete",
+      to: "public",
+      using: sql`${t.ownerUserId} = ${CURRENT_USER} OR ${t.sharedWithUserId} = ${CURRENT_USER}`,
     }),
   ],
 ).enableRLS();

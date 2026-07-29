@@ -29,6 +29,27 @@
       "when": 1785262388760,
       "tag": "0003_outstanding_nuke",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1785272557634,
+      "tag": "0004_ambitious_wrecker",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785274186644,
+      "tag": "0005_charming_speed_demon",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785274622380,
+      "tag": "0006_large_bloodstrike",
+      "breakpoints": true
     }
   ]
 }

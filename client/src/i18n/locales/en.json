@@ -1,0 +1,70 @@
+{
+  "common": {
+    "appName": "Fintory",
+    "loading": "Loading…",
+    "edit": "Edit",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "saveChanges": "Save changes"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "expenses": "Expenses",
+    "loans": "Loans",
+    "savings": "Savings",
+    "assets": "Assets",
+    "budgets": "Budgets",
+    "recurring": "Recurring",
+    "linked": "Linked",
+    "sharing": "Sharing",
+    "account": "Account",
+    "signOut": "Sign out",
+    "switchToLightMode": "Switch to light mode",
+    "switchToDarkMode": "Switch to dark mode",
+    "viewingAs": "Viewing {{name}} account's data",
+    "viewingAsFallback": "a shared",
+    "switchBack": "switch back to your own",
+    "skipToContent": "Skip to main content",
+    "offline": "Offline",
+    "pendingSync_one": "{{count}} pending sync",
+    "pendingSync_other": "{{count}} pending syncs"
+  },
+  "footer": {
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service"
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "noAccount": "No account?",
+      "signUp": "Sign up",
+      "genericError": "Sign in failed"
+    },
+    "signup": {
+      "title": "Create your account",
+      "name": "Name",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign up",
+      "submitting": "Creating account…",
+      "haveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "genericError": "Sign up failed"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "exportPdf": "Export PDF report",
+    "convertedTotal": "Converted total",
+    "monthSpend": "This month's spend",
+    "netWorth": "Net worth",
+    "insights": "Insights",
+    "nativeBreakdown": "Native per-currency breakdown",
+    "categoryBreakdown": "Category breakdown",
+    "empty": "Add some expenses, savings, or assets to see your dashboard."
+  }
+}

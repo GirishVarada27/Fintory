@@ -8,9 +8,10 @@ import {
   type ListExpensesQuery,
 } from "../../shared/schemas/expenses";
 import { validateBody, validateQuery } from "../middleware/validate";
-import { notFound, validationError } from "../lib/errors";
+import { notFound, sendError, validationError } from "../lib/errors";
 import { encodeCursor as encodeSimpleCursor, decodeCursor as decodeSimpleCursor } from "../lib/pagination";
 import { writeAuditLog } from "../lib/auditLog";
+import { resolveViewContext } from "../lib/viewContext";
 
 export const expensesRouter = Router();
 
@@ -61,10 +62,12 @@ function extractSortValue(row: typeof expenses.$inferSelect, sortBy: SortBy): st
 }
 
 expensesRouter.get("/", validateQuery(listExpensesQuerySchema), async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
   const query = req.validatedQuery as ListExpensesQuery;
   const cursor = decodeCursor(query.cursor);
 
-  const conditions = [eq(expenses.userId, req.user!.id)];
+  const conditions = [eq(expenses.userId, view.ownerId)];
   if (query.categoryId) conditions.push(eq(expenses.categoryId, query.categoryId));
   if (query.from) conditions.push(gte(expenses.date, query.from));
   if (query.to) conditions.push(lte(expenses.date, query.to));
@@ -94,10 +97,12 @@ expensesRouter.get("/", validateQuery(listExpensesQuerySchema), async (req, res)
 });
 
 expensesRouter.get("/:id", async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
   const [row] = await req.db
     .select()
     .from(expenses)
-    .where(and(eq(expenses.id, req.params.id as string), eq(expenses.userId, req.user!.id)));
+    .where(and(eq(expenses.id, req.params.id as string), eq(expenses.userId, view.ownerId)));
   if (!row) {
     notFound(res);
     return;
@@ -110,6 +115,13 @@ expensesRouter.get("/:id", async (req, res) => {
 });
 
 expensesRouter.post("/", validateBody(createExpenseSchema), async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
+  if (!view.canEdit) {
+    sendError(res, 403, "FORBIDDEN", "You only have view access to this account");
+    return;
+  }
+
   const { splits, ...expenseFields } = req.body;
 
   const [row] = await req.db
@@ -117,7 +129,7 @@ expensesRouter.post("/", validateBody(createExpenseSchema), async (req, res) => 
     .values({
       ...expenseFields,
       amount: String(expenseFields.amount),
-      userId: req.user!.id,
+      userId: view.ownerId,
     })
     .returning();
 
@@ -127,7 +139,7 @@ expensesRouter.post("/", validateBody(createExpenseSchema), async (req, res) => 
       .insert(expenseSplits)
       .values(
         splits.map((s: { categoryId?: string | null; amount: number }) => ({
-          userId: req.user!.id,
+          userId: view.ownerId,
           expenseId: row.id,
           categoryId: s.categoryId ?? null,
           amount: String(s.amount),
@@ -136,12 +148,19 @@ expensesRouter.post("/", validateBody(createExpenseSchema), async (req, res) => 
       .returning();
   }
 
-  await writeAuditLog(req.db, req.user!.id, "expense", row.id, "create", null, { ...row, splits: createdSplits });
+  await writeAuditLog(req.db, view.ownerId, "expense", row.id, "create", null, { ...row, splits: createdSplits });
 
   res.status(201).json({ data: { ...row, splits: createdSplits } });
 });
 
 expensesRouter.patch("/:id", validateBody(updateExpenseSchema), async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
+  if (!view.canEdit) {
+    sendError(res, 403, "FORBIDDEN", "You only have view access to this account");
+    return;
+  }
+
   const expenseId = req.params.id as string;
   const { splits, ...bodyFields } = req.body;
   const updates = { ...bodyFields } as Record<string, unknown>;
@@ -151,7 +170,7 @@ expensesRouter.patch("/:id", validateBody(updateExpenseSchema), async (req, res)
   const [existing] = await req.db
     .select()
     .from(expenses)
-    .where(and(eq(expenses.id, expenseId), eq(expenses.userId, req.user!.id)));
+    .where(and(eq(expenses.id, expenseId), eq(expenses.userId, view.ownerId)));
   if (!existing) {
     notFound(res);
     return;
@@ -169,7 +188,7 @@ expensesRouter.patch("/:id", validateBody(updateExpenseSchema), async (req, res)
   const [row] = await req.db
     .update(expenses)
     .set(updates)
-    .where(and(eq(expenses.id, expenseId), eq(expenses.userId, req.user!.id)))
+    .where(and(eq(expenses.id, expenseId), eq(expenses.userId, view.ownerId)))
     .returning();
   if (!row) {
     notFound(res);
@@ -184,7 +203,7 @@ expensesRouter.patch("/:id", validateBody(updateExpenseSchema), async (req, res)
         .insert(expenseSplits)
         .values(
           splits.map((s: { categoryId?: string | null; amount: number }) => ({
-            userId: req.user!.id,
+            userId: view.ownerId,
             expenseId,
             categoryId: s.categoryId ?? null,
             amount: String(s.amount),
@@ -196,22 +215,29 @@ expensesRouter.patch("/:id", validateBody(updateExpenseSchema), async (req, res)
     resultSplits = await req.db.select().from(expenseSplits).where(eq(expenseSplits.expenseId, expenseId));
   }
 
-  await writeAuditLog(req.db, req.user!.id, "expense", row.id, "update", existing, { ...row, splits: resultSplits });
+  await writeAuditLog(req.db, view.ownerId, "expense", row.id, "update", existing, { ...row, splits: resultSplits });
 
   res.json({ data: { ...row, splits: resultSplits } });
 });
 
 expensesRouter.delete("/:id", async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
+  if (!view.canEdit) {
+    sendError(res, 403, "FORBIDDEN", "You only have view access to this account");
+    return;
+  }
+
   const [row] = await req.db
     .delete(expenses)
-    .where(and(eq(expenses.id, req.params.id as string), eq(expenses.userId, req.user!.id)))
+    .where(and(eq(expenses.id, req.params.id as string), eq(expenses.userId, view.ownerId)))
     .returning();
   if (!row) {
     notFound(res);
     return;
   }
 
-  await writeAuditLog(req.db, req.user!.id, "expense", row.id, "delete", row, null);
+  await writeAuditLog(req.db, view.ownerId, "expense", row.id, "delete", row, null);
 
   res.status(204).send();
 });

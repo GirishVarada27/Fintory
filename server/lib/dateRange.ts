@@ -14,3 +14,9 @@ export function monthRange(monthStr?: string): MonthRange {
   const end = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, "0")}-01`;
   return { start, end, month: `${year}-${String(month).padStart(2, "0")}` };
 }
+
+export function previousMonthOf(monthStr: string): string {
+  const [year, month] = monthStr.split("-").map(Number);
+  const prevDate = new Date(year, month - 2, 1);
+  return `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`;
+}

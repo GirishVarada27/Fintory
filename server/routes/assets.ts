@@ -8,9 +8,10 @@ import {
 } from "../../shared/schemas/assets";
 import type { PaginationQuery } from "../../shared/schemas/common";
 import { validateBody, validateQuery } from "../middleware/validate";
-import { notFound } from "../lib/errors";
+import { notFound, sendError } from "../lib/errors";
 import { cursorCondition, decodeCursor, encodeCursor } from "../lib/pagination";
 import { writeAuditLog } from "../lib/auditLog";
+import { resolveViewContext } from "../lib/viewContext";
 
 export const assetsRouter = Router();
 
@@ -28,10 +29,12 @@ function stringifyMoney<T extends Record<string, unknown>>(body: T): T {
 }
 
 assetsRouter.get("/", validateQuery(listAssetsQuerySchema), async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
   const query = req.validatedQuery as PaginationQuery;
   const cursor = decodeCursor(query.cursor);
 
-  const conditions = [eq(assets.userId, req.user!.id)];
+  const conditions = [eq(assets.userId, view.ownerId)];
   const cursorClause = cursorCondition(assets.createdAt, assets.id, cursor);
   if (cursorClause) conditions.push(cursorClause);
 
@@ -52,10 +55,12 @@ assetsRouter.get("/", validateQuery(listAssetsQuerySchema), async (req, res) => 
 });
 
 assetsRouter.get("/:id", async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
   const [row] = await req.db
     .select()
     .from(assets)
-    .where(and(eq(assets.id, req.params.id as string), eq(assets.userId, req.user!.id)));
+    .where(and(eq(assets.id, req.params.id as string), eq(assets.userId, view.ownerId)));
   if (!row) {
     notFound(res);
     return;
@@ -64,24 +69,38 @@ assetsRouter.get("/:id", async (req, res) => {
 });
 
 assetsRouter.post("/", validateBody(createAssetSchema), async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
+  if (!view.canEdit) {
+    sendError(res, 403, "FORBIDDEN", "You only have view access to this account");
+    return;
+  }
+
   const [row] = await req.db
     .insert(assets)
-    .values({ ...stringifyMoney(req.body), userId: req.user!.id })
+    .values({ ...stringifyMoney(req.body), userId: view.ownerId })
     .returning();
 
-  await writeAuditLog(req.db, req.user!.id, "asset", row.id, "create", null, row);
+  await writeAuditLog(req.db, view.ownerId, "asset", row.id, "create", null, row);
 
   res.status(201).json({ data: row });
 });
 
 assetsRouter.patch("/:id", validateBody(updateAssetSchema), async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
+  if (!view.canEdit) {
+    sendError(res, 403, "FORBIDDEN", "You only have view access to this account");
+    return;
+  }
+
   const assetId = req.params.id as string;
   const updates = { ...stringifyMoney(req.body), updatedAt: new Date() };
 
   const [existing] = await req.db
     .select()
     .from(assets)
-    .where(and(eq(assets.id, assetId), eq(assets.userId, req.user!.id)));
+    .where(and(eq(assets.id, assetId), eq(assets.userId, view.ownerId)));
   if (!existing) {
     notFound(res);
     return;
@@ -90,29 +109,36 @@ assetsRouter.patch("/:id", validateBody(updateAssetSchema), async (req, res) => 
   const [row] = await req.db
     .update(assets)
     .set(updates)
-    .where(and(eq(assets.id, assetId), eq(assets.userId, req.user!.id)))
+    .where(and(eq(assets.id, assetId), eq(assets.userId, view.ownerId)))
     .returning();
   if (!row) {
     notFound(res);
     return;
   }
 
-  await writeAuditLog(req.db, req.user!.id, "asset", row.id, "update", existing, row);
+  await writeAuditLog(req.db, view.ownerId, "asset", row.id, "update", existing, row);
 
   res.json({ data: row });
 });
 
 assetsRouter.delete("/:id", async (req, res) => {
+  const view = await resolveViewContext(req, res);
+  if (!view) return;
+  if (!view.canEdit) {
+    sendError(res, 403, "FORBIDDEN", "You only have view access to this account");
+    return;
+  }
+
   const [row] = await req.db
     .delete(assets)
-    .where(and(eq(assets.id, req.params.id as string), eq(assets.userId, req.user!.id)))
+    .where(and(eq(assets.id, req.params.id as string), eq(assets.userId, view.ownerId)))
     .returning();
   if (!row) {
     notFound(res);
     return;
   }
 
-  await writeAuditLog(req.db, req.user!.id, "asset", row.id, "delete", row, null);
+  await writeAuditLog(req.db, view.ownerId, "asset", row.id, "delete", row, null);
 
   res.status(204).send();
 });

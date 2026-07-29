@@ -14,6 +14,11 @@ export const auth = betterAuth({
   }),
   secret: process.env.BETTER_AUTH_SECRET,
   baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+  // In dev, the browser talks to Vite's origin (5173), which proxies /api/*
+  // to Express (3000) — but the browser's Origin header is still 5173, so
+  // Better Auth's origin check needs it trusted explicitly. Production has
+  // no separate Vite process; the browser's origin always matches baseURL.
+  trustedOrigins: process.env.NODE_ENV === "production" ? [] : ["http://localhost:5173"],
   emailAndPassword: {
     enabled: true,
   },

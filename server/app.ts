@@ -18,6 +18,7 @@ import { exportRouter } from "./routes/export";
 import { receiptsRouter } from "./routes/receipts";
 import { plaidRouter } from "./routes/plaid";
 import { accountRouter } from "./routes/account";
+import { sharesRouter } from "./routes/shares";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -44,6 +45,7 @@ export function createApp() {
   api.use("/receipts", receiptsRouter);
   api.use("/plaid", plaidRouter);
   api.use("/account", accountRouter);
+  api.use("/shares", sharesRouter);
   app.use("/api/v1", api);
 
   if (process.env.NODE_ENV === "production") {

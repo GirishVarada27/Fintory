@@ -67,15 +67,15 @@ export default function LinkedAccounts() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">Linked Accounts</h1>
-      <p className="text-sm text-slate-400">
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Linked Accounts</h1>
+      <p className="text-sm text-slate-600 dark:text-slate-400">
         Connect a bank or card account to automatically pull in transactions. Read-only — Fintory can never
         move money.
       </p>
 
       {!configured ? (
         <div className={cardClass}>
-          <p className="text-slate-400">Bank linking isn't configured yet.</p>
+          <p className="text-slate-600 dark:text-slate-400">Bank linking isn't configured yet.</p>
         </div>
       ) : (
         <button onClick={startLink} className={primaryButtonClass}>
@@ -86,15 +86,15 @@ export default function LinkedAccounts() {
       {error && <p className={dangerTextClass}>{error}</p>}
 
       {loading ? (
-        <p className="text-slate-400">Loading…</p>
+        <p className="text-slate-600 dark:text-slate-400">Loading…</p>
       ) : accounts.length === 0 ? (
-        <p className="text-slate-400">No linked accounts yet.</p>
+        <p className="text-slate-600 dark:text-slate-400">No linked accounts yet.</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {accounts.map((account) => (
             <div key={account.id} className={cardClass}>
-              <h2 className="font-semibold text-white">{account.institutionName}</h2>
-              <p className="text-sm text-slate-300">
+              <h2 className="font-semibold text-slate-900 dark:text-white">{account.institutionName}</h2>
+              <p className="text-sm text-slate-700 dark:text-slate-300">
                 {account.accountName}
                 {account.mask && ` ••••${account.mask}`}
               </p>
@@ -103,7 +103,8 @@ export default function LinkedAccounts() {
               )}
               <button
                 onClick={() => handleUnlink(account.id)}
-                className="mt-3 text-sm text-rose-400 hover:underline"
+                aria-label={`Unlink ${account.institutionName} ${account.accountName}`}
+                className="mt-3 text-sm text-rose-600 dark:text-rose-400 hover:underline"
               >
                 Unlink
               </button>

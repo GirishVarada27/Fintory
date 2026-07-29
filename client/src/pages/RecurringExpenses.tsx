@@ -36,30 +36,38 @@ export default function RecurringExpenses() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">Recurring Expenses</h1>
-      <p className="text-sm text-slate-400">
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Recurring Expenses</h1>
+      <p className="text-sm text-slate-600 dark:text-slate-400">
         Vendors charging you on a regular cadence, detected from your expense history.
       </p>
 
       {loading ? (
-        <p className="text-slate-400">Loading…</p>
+        <p className="text-slate-600 dark:text-slate-400">Loading…</p>
       ) : pending.length === 0 ? (
-        <p className="text-slate-400">Nothing new to review.</p>
+        <p className="text-slate-600 dark:text-slate-400">Nothing new to review.</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {pending.map((item) => (
             <div key={item.id} className={cardClass}>
-              <h2 className="font-semibold text-white">{item.vendor}</h2>
-              <p className="text-xs text-slate-400">{categoryName(item.categoryId)}</p>
-              <p className="mt-2 text-sm text-slate-300">
+              <h2 className="font-semibold text-slate-900 dark:text-white">{item.vendor}</h2>
+              <p className="text-xs text-slate-600 dark:text-slate-400">{categoryName(item.categoryId)}</p>
+              <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
                 ~{item.averageAmount} {item.currency} every ~{item.cadenceDays} days
               </p>
               <p className="text-xs text-slate-500">Last seen {item.lastSeenDate}</p>
               <div className="mt-3 flex gap-2">
-                <button onClick={() => handleStatus(item.id, "confirmed")} className={primaryButtonClass}>
+                <button
+                  onClick={() => handleStatus(item.id, "confirmed")}
+                  aria-label={`Confirm ${item.vendor} as a subscription`}
+                  className={primaryButtonClass}
+                >
                   Confirm
                 </button>
-                <button onClick={() => handleStatus(item.id, "dismissed")} className={secondaryButtonClass}>
+                <button
+                  onClick={() => handleStatus(item.id, "dismissed")}
+                  aria-label={`Dismiss ${item.vendor} suggestion`}
+                  className={secondaryButtonClass}
+                >
                   Dismiss
                 </button>
               </div>
@@ -70,23 +78,23 @@ export default function RecurringExpenses() {
 
       {reviewed.length > 0 && (
         <div>
-          <h2 className="mb-3 text-lg font-semibold text-white">Reviewed</h2>
+          <h2 className="mb-3 text-lg font-semibold text-slate-900 dark:text-white">Reviewed</h2>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {reviewed.map((item) => (
               <div key={item.id} className={`${cardClass} opacity-70`}>
                 <div className="flex items-center justify-between">
-                  <h3 className="font-medium text-white">{item.vendor}</h3>
+                  <h3 className="font-medium text-slate-900 dark:text-white">{item.vendor}</h3>
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                       item.status === "confirmed"
-                        ? "bg-emerald-500/20 text-emerald-300"
-                        : "bg-white/10 text-slate-400"
+                        ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                        : "bg-black/5 dark:bg-white/10 text-slate-600 dark:text-slate-400"
                     }`}
                   >
                     {item.status}
                   </span>
                 </div>
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-slate-600 dark:text-slate-400">
                   ~{item.averageAmount} {item.currency} every ~{item.cadenceDays} days
                 </p>
               </div>

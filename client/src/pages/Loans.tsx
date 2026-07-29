@@ -91,12 +91,13 @@ export default function Loans() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">Loans</h1>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Loans</h1>
 
       <form onSubmit={handleSubmit} className={`grid grid-cols-1 gap-3 sm:grid-cols-4 ${cardClass}`}>
         <div>
-          <label className={labelClass}>Lender</label>
+          <label htmlFor="loan-lender" className={labelClass}>Lender</label>
           <input
+            id="loan-lender"
             type="text"
             required
             value={form.lender}
@@ -105,8 +106,9 @@ export default function Loans() {
           />
         </div>
         <div>
-          <label className={labelClass}>Type</label>
+          <label htmlFor="loan-type" className={labelClass}>Type</label>
           <input
+            id="loan-type"
             type="text"
             placeholder="mortgage, auto, ..."
             value={form.type}
@@ -115,8 +117,9 @@ export default function Loans() {
           />
         </div>
         <div>
-          <label className={labelClass}>Principal</label>
+          <label htmlFor="loan-principal" className={labelClass}>Principal</label>
           <input
+            id="loan-principal"
             type="number"
             step="0.01"
             min="0.01"
@@ -127,8 +130,9 @@ export default function Loans() {
           />
         </div>
         <div>
-          <label className={labelClass}>Currency</label>
+          <label htmlFor="loan-currency" className={labelClass}>Currency</label>
           <input
+            id="loan-currency"
             type="text"
             required
             maxLength={3}
@@ -138,8 +142,9 @@ export default function Loans() {
           />
         </div>
         <div>
-          <label className={labelClass}>APR %</label>
+          <label htmlFor="loan-apr" className={labelClass}>APR %</label>
           <input
+            id="loan-apr"
             type="number"
             step="0.001"
             min="0"
@@ -151,8 +156,9 @@ export default function Loans() {
           />
         </div>
         <div>
-          <label className={labelClass}>Term (months)</label>
+          <label htmlFor="loan-term" className={labelClass}>Term (months)</label>
           <input
+            id="loan-term"
             type="number"
             step="1"
             min="1"
@@ -163,8 +169,9 @@ export default function Loans() {
           />
         </div>
         <div>
-          <label className={labelClass}>Monthly payment</label>
+          <label htmlFor="loan-payment" className={labelClass}>Monthly payment</label>
           <input
+            id="loan-payment"
             type="number"
             step="0.01"
             min="0.01"
@@ -175,8 +182,9 @@ export default function Loans() {
           />
         </div>
         <div>
-          <label className={labelClass}>Start date</label>
+          <label htmlFor="loan-start-date" className={labelClass}>Start date</label>
           <input
+            id="loan-start-date"
             type="date"
             required
             value={form.startDate}
@@ -198,27 +206,27 @@ export default function Loans() {
       </form>
 
       {loading ? (
-        <p className="text-slate-400">Loading…</p>
+        <p className="text-slate-600 dark:text-slate-400">Loading…</p>
       ) : loans.length === 0 ? (
-        <p className="text-slate-400">No loans yet.</p>
+        <p className="text-slate-600 dark:text-slate-400">No loans yet.</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {loans.map((loan) => (
             <div key={loan.id} className={cardClass}>
               <div className="mb-2 flex items-start justify-between">
                 <div>
-                  <h2 className="font-semibold text-white">{loan.lender}</h2>
-                  {loan.type && <p className="text-xs uppercase tracking-wide text-slate-400">{loan.type}</p>}
+                  <h2 className="font-semibold text-slate-900 dark:text-white">{loan.lender}</h2>
+                  {loan.type && <p className="text-xs uppercase tracking-wide text-slate-600 dark:text-slate-400">{loan.type}</p>}
                 </div>
                 {loan.isPaidOff && (
-                  <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-semibold text-emerald-300">
+                  <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
                     Paid off
                   </span>
                 )}
               </div>
-              <dl className="grid grid-cols-2 gap-y-1 text-sm text-slate-300">
+              <dl className="grid grid-cols-2 gap-y-1 text-sm text-slate-700 dark:text-slate-300">
                 <dt className="text-slate-500">Outstanding</dt>
-                <dd className="text-right font-medium text-white">
+                <dd className="text-right font-medium text-slate-900 dark:text-white">
                   {loan.outstandingPrincipal.toFixed(2)} {loan.currency}
                 </dd>
                 <dt className="text-slate-500">Months remaining</dt>
@@ -231,15 +239,23 @@ export default function Loans() {
                 <dd className="text-right">{loan.apr}%</dd>
               </dl>
               {loan.isNonAmortizing && (
-                <p className="mt-2 text-xs text-amber-400">
+                <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
                   Payment doesn't cover accruing interest — balance won't reach zero at this rate.
                 </p>
               )}
               <div className="mt-3 flex gap-3 text-sm">
-                <button onClick={() => startEdit(loan)} className="text-fuchsia-400 hover:underline">
+                <button
+                  onClick={() => startEdit(loan)}
+                  aria-label={`Edit ${loan.lender}`}
+                  className="text-fuchsia-600 dark:text-fuchsia-400 hover:underline"
+                >
                   Edit
                 </button>
-                <button onClick={() => handleDelete(loan.id)} className="text-rose-400 hover:underline">
+                <button
+                  onClick={() => handleDelete(loan.id)}
+                  aria-label={`Delete ${loan.lender}`}
+                  className="text-rose-600 dark:text-rose-400 hover:underline"
+                >
                   Delete
                 </button>
               </div>

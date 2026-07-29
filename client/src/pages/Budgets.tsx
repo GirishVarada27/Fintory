@@ -79,12 +79,13 @@ export default function Budgets() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">Budgets</h1>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Budgets</h1>
 
       <form onSubmit={handleSubmit} className={`grid grid-cols-1 gap-3 sm:grid-cols-4 ${cardClass}`}>
         <div>
-          <label className={labelClass}>Category</label>
+          <label htmlFor="budget-category" className={labelClass}>Category</label>
           <select
+            id="budget-category"
             required
             value={form.categoryId}
             onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
@@ -101,8 +102,9 @@ export default function Budgets() {
           </select>
         </div>
         <div>
-          <label className={labelClass}>Monthly limit</label>
+          <label htmlFor="budget-limit" className={labelClass}>Monthly limit</label>
           <input
+            id="budget-limit"
             type="number"
             step="0.01"
             min="0.01"
@@ -113,8 +115,9 @@ export default function Budgets() {
           />
         </div>
         <div>
-          <label className={labelClass}>Currency</label>
+          <label htmlFor="budget-currency" className={labelClass}>Currency</label>
           <input
+            id="budget-currency"
             type="text"
             required
             maxLength={3}
@@ -124,8 +127,9 @@ export default function Budgets() {
           />
         </div>
         <div>
-          <label className={labelClass}>Alert threshold %</label>
+          <label htmlFor="budget-threshold" className={labelClass}>Alert threshold %</label>
           <input
+            id="budget-threshold"
             type="number"
             step="1"
             min="1"
@@ -150,9 +154,9 @@ export default function Budgets() {
       </form>
 
       {loading ? (
-        <p className="text-slate-400">Loading…</p>
+        <p className="text-slate-600 dark:text-slate-400">Loading…</p>
       ) : budgets.length === 0 ? (
-        <p className="text-slate-400">No budgets yet.</p>
+        <p className="text-slate-600 dark:text-slate-400">No budgets yet.</p>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {budgets.map((budget) => {
@@ -167,20 +171,35 @@ export default function Budgets() {
             return (
               <div key={budget.id} className={cardClass}>
                 <div className="mb-2 flex items-center justify-between">
-                  <h2 className="font-semibold text-white">{categoryName(budget.categoryId)}</h2>
-                  <span className="text-xs text-slate-400">{Math.round(budget.percentUsed)}% used</span>
+                  <h2 className="font-semibold text-slate-900 dark:text-white">{categoryName(budget.categoryId)}</h2>
+                  <span className="text-xs text-slate-600 dark:text-slate-400">{Math.round(budget.percentUsed)}% used</span>
                 </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
+                <div
+                  role="progressbar"
+                  aria-valuenow={pct}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`${categoryName(budget.categoryId)} budget usage`}
+                  className="h-2 w-full overflow-hidden rounded-full bg-black/5 dark:bg-white/10"
+                >
                   <div className={`h-full ${barColor}`} style={{ width: `${pct}%` }} />
                 </div>
-                <p className="mt-2 text-sm text-slate-300">
+                <p className="mt-2 text-sm text-slate-700 dark:text-slate-300">
                   {budget.spentToDate.toFixed(2)} / {budget.monthlyLimit} {budget.currency} this month
                 </p>
                 <div className="mt-3 flex gap-3 text-sm">
-                  <button onClick={() => startEdit(budget)} className="text-fuchsia-400 hover:underline">
+                  <button
+                    onClick={() => startEdit(budget)}
+                    aria-label={`Edit ${categoryName(budget.categoryId)} budget`}
+                    className="text-fuchsia-600 dark:text-fuchsia-400 hover:underline"
+                  >
                     Edit
                   </button>
-                  <button onClick={() => handleDelete(budget.id)} className="text-rose-400 hover:underline">
+                  <button
+                    onClick={() => handleDelete(budget.id)}
+                    aria-label={`Delete ${categoryName(budget.categoryId)} budget`}
+                    className="text-rose-600 dark:text-rose-400 hover:underline"
+                  >
                     Delete
                   </button>
                 </div>

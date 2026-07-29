@@ -28,11 +28,11 @@ export default function AccountSettings() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">Account Settings</h1>
+      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Account Settings</h1>
 
       <div className={cardClass}>
-        <h2 className="mb-2 font-semibold text-white">Your data</h2>
-        <p className="mb-3 text-sm text-slate-400">
+        <h2 className="mb-2 font-semibold text-slate-900 dark:text-white">Your data</h2>
+        <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
           Signed in as {session?.user?.email}. Download everything Fintory has stored for your account as
           JSON.
         </p>
@@ -42,15 +42,16 @@ export default function AccountSettings() {
       </div>
 
       <div className={cardClass}>
-        <h2 className="mb-2 font-semibold text-rose-400">Delete account</h2>
-        <p className="mb-3 text-sm text-slate-400">
+        <h2 className="mb-2 font-semibold text-rose-600 dark:text-rose-400">Delete account</h2>
+        <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
           This permanently deletes your account and everything in it — expenses, loans, savings, assets,
           budgets, linked accounts, receipts, and history. This cannot be undone.
         </p>
-        <label className={labelClass}>
-          Type <span className="font-mono text-slate-200">{CONFIRMATION_PHRASE}</span> to confirm
+        <label htmlFor="delete-confirmation" className={labelClass}>
+          Type <span className="font-mono text-slate-800 dark:text-slate-200">{CONFIRMATION_PHRASE}</span> to confirm
         </label>
         <input
+          id="delete-confirmation"
           type="text"
           value={confirmationInput}
           onChange={(e) => setConfirmationInput(e.target.value)}

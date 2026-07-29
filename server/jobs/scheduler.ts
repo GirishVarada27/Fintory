@@ -7,6 +7,7 @@ import { detectRecurringForUser } from "./detectRecurring";
 import { checkBudgetThresholdsForUser } from "./checkBudgets";
 import { checkLoanRemindersForUser } from "./loanReminders";
 import { syncPlaidTransactionsForUser } from "./syncPlaidTransactions";
+import { detectAnomaliesForUser } from "./detectAnomalies";
 
 async function getAllUserIds(): Promise<string[]> {
   const rows = await db.select({ id: user.id }).from(user);
@@ -35,6 +36,11 @@ async function runPerUserJobs(): Promise<void> {
       await runAsUser(userId, (tx) => syncPlaidTransactionsForUser(tx, userId));
     } catch (err) {
       console.error(`[jobs] syncPlaidTransactions failed for user ${userId}`, err);
+    }
+    try {
+      await runAsUser(userId, (tx) => detectAnomaliesForUser(tx, userId));
+    } catch (err) {
+      console.error(`[jobs] detectAnomalies failed for user ${userId}`, err);
     }
   }
 }

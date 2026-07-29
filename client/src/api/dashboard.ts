@@ -15,10 +15,19 @@ export interface ConvertedSummary {
   unavailable: boolean;
 }
 
+export interface SpendingInsight {
+  message: string;
+  categoryName: string;
+  currency: string;
+  percentChange: number;
+  direction: "up" | "down";
+}
+
 export interface DashboardSummary {
   month: string;
   byCurrency: CurrencySummary[];
   converted: ConvertedSummary;
+  insights: SpendingInsight[];
 }
 
 export const getDashboardSummary = (month?: string) =>

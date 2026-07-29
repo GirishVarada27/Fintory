@@ -1,1 +1,7 @@
 @import "tailwindcss";
+
+/* Class-based dark mode (not just prefers-color-scheme media query) so a
+   manual toggle can override the system default — the toggle in NavBar
+   flips a "dark" class on <html>, initialized from localStorage or, absent
+   a stored choice, prefers-color-scheme. */
+@custom-variant dark (&:where(.dark, .dark *));
