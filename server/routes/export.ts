@@ -7,6 +7,17 @@ import { validateQuery } from "../middleware/validate";
 import { isoDate, currencyCode } from "../../shared/schemas/common";
 import { formatMoney } from "../../shared/currency";
 import { computeDashboardSummary } from "../lib/dashboardSummary";
+import {
+  COLORS,
+  drawBarChart,
+  drawFooter,
+  drawHeader,
+  drawInsights,
+  drawSectionTitle,
+  drawSummaryCards,
+  drawTable,
+  ensureSpace,
+} from "../lib/pdfReport";
 
 export const exportRouter = Router();
 
@@ -74,39 +85,99 @@ exportRouter.get("/report.pdf", validateQuery(reportQuerySchema), async (req, re
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `attachment; filename="fintory-report-${summary.month}.pdf"`);
 
-  const doc = new PDFDocument({ margin: 50 });
+  const doc = new PDFDocument({ margin: 50, bufferPages: true });
   doc.pipe(res);
 
-  doc.fontSize(20).text("Fintory Monthly Report", { align: "left" });
-  doc.fontSize(12).fillColor("#666").text(summary.month).fillColor("#000");
-  doc.moveDown();
+  const marginX = 50;
+  const contentWidth = doc.page.width - marginX * 2;
+  const generatedAt = new Date().toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
 
-  doc.fontSize(14).text(`Converted total (${summary.converted.currency})`);
-  doc.fontSize(11);
+  drawHeader(doc, { month: summary.month, generatedAt, pageWidth: contentWidth, marginX });
+
   if (summary.converted.unavailable) {
-    doc.fillColor("#a33").text(summary.converted.note).fillColor("#000");
+    const boxTop = doc.y;
+    doc.roundedRect(marginX, boxTop, contentWidth, 40, 6).fill(COLORS.slate100);
+    doc
+      .font("Helvetica")
+      .fontSize(10)
+      .fillColor(COLORS.rose)
+      .text(summary.converted.note, marginX + 14, boxTop + 14, { width: contentWidth - 28 });
+    doc.y = boxTop + 56;
   } else {
-    doc.text(`Spend this month: ${formatMoney(summary.converted.monthTotalSpend, summary.converted.currency)}`);
-    doc.text(`Net worth: ${formatMoney(summary.converted.netWorth, summary.converted.currency)}`);
-    doc.fillColor("#666").text(summary.converted.note).fillColor("#000");
+    drawSummaryCards(doc, marginX, contentWidth, [
+      {
+        label: `This month's spend (${summary.converted.currency})`,
+        value: formatMoney(summary.converted.monthTotalSpend, summary.converted.currency),
+        accent: COLORS.fuchsia,
+      },
+      {
+        label: `Net worth (${summary.converted.currency})`,
+        value: formatMoney(summary.converted.netWorth, summary.converted.currency),
+        accent: COLORS.cyan,
+      },
+    ]);
+    doc
+      .font("Helvetica")
+      .fontSize(8)
+      .fillColor(COLORS.slate500)
+      .text(summary.converted.note, marginX, doc.y - 8, { width: contentWidth });
+    doc.y += 14;
   }
-  doc.moveDown();
+
+  drawInsights(
+    doc,
+    marginX,
+    contentWidth,
+    summary.insights.map((insight) => ({ message: insight.message, direction: insight.direction })),
+  );
 
   for (const currencySummary of summary.byCurrency) {
-    doc.fontSize(14).text(`${currencySummary.currency} (native)`);
-    doc.fontSize(11);
-    doc.text(`Spend this month: ${formatMoney(currencySummary.monthTotalSpend, currencySummary.currency)}`);
-    doc.text(`Net worth: ${formatMoney(currencySummary.netWorth, currencySummary.currency)}`);
+    ensureSpace(doc, 220, 60);
+    drawSectionTitle(doc, marginX, `${currencySummary.currency} — Category Breakdown`);
+
     if (currencySummary.categoryBreakdown.length > 0) {
-      doc.moveDown(0.5);
-      doc.fontSize(12).text("Category breakdown:");
-      doc.fontSize(11);
-      for (const cat of currencySummary.categoryBreakdown) {
-        doc.text(`  ${cat.categoryName}: ${formatMoney(cat.total, currencySummary.currency)}`);
-      }
+      drawBarChart(
+        doc,
+        marginX,
+        contentWidth,
+        currencySummary.categoryBreakdown.map((c) => ({ label: c.categoryName, value: Number(c.total) })),
+        (n) => formatMoney(n, currencySummary.currency),
+      );
+
+      ensureSpace(doc, currencySummary.categoryBreakdown.length * 22 + 60, 60);
+      drawTable(
+        doc,
+        marginX,
+        [
+          { header: "Category", width: contentWidth - 140 },
+          { header: "Amount", width: 140, align: "right" },
+        ],
+        [
+          ...currencySummary.categoryBreakdown
+            .slice()
+            .sort((a, b) => Number(b.total) - Number(a.total))
+            .map((c) => [c.categoryName, formatMoney(c.total, currencySummary.currency)]),
+          ["Total spend this month", formatMoney(currencySummary.monthTotalSpend, currencySummary.currency)],
+        ],
+        { boldLastRow: true },
+      );
+    } else {
+      doc
+        .font("Helvetica")
+        .fontSize(10)
+        .fillColor(COLORS.slate500)
+        .text("No expenses recorded in this currency for this month.", marginX, doc.y);
+      doc.y += 20;
     }
-    doc.moveDown();
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(10)
+      .fillColor(COLORS.slate700)
+      .text(`Net worth: ${formatMoney(currencySummary.netWorth, currencySummary.currency)}`, marginX, doc.y);
+    doc.y += 28;
   }
 
+  drawFooter(doc, marginX);
   doc.end();
 });
