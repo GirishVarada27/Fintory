@@ -18,6 +18,7 @@ export interface DashboardHistoryData {
   currency: string;
   points: MonthlyHistoryPoint[];
   availableYears: number[];
+  unavailable: boolean;
 }
 
 // Last calendar day of `month` (1-12) in `year`, as YYYY-MM-DD.
@@ -86,48 +87,60 @@ export async function computeDashboardHistory(
 
   const lastMonth = year === currentYear ? now.getMonth() + 1 : 12;
   const points: MonthlyHistoryPoint[] = [];
+  let conversionFailed = false;
 
-  for (let m = 1; m <= lastMonth; m++) {
-    const monthStr = `${year}-${String(m).padStart(2, "0")}`;
-    const asOf = monthEndDate(year, m);
+  try {
+    for (let m = 1; m <= lastMonth; m++) {
+      const monthStr = `${year}-${String(m).padStart(2, "0")}`;
+      const asOf = monthEndDate(year, m);
 
-    let monthIncome = 0;
-    for (const row of yearIncome.filter((r) => r.date.startsWith(monthStr))) {
-      monthIncome += await convertOnDate(tx, Number(row.amount), row.currency, displayCurrency, row.date);
-    }
+      let monthIncome = 0;
+      for (const row of yearIncome.filter((r) => r.date.startsWith(monthStr))) {
+        monthIncome += await convertOnDate(tx, Number(row.amount), row.currency, displayCurrency, row.date);
+      }
 
-    let monthExpenses = 0;
-    for (const row of yearExpenses.filter((r) => r.date.startsWith(monthStr))) {
-      monthExpenses += await convertOnDate(tx, Number(row.amount), row.currency, displayCurrency, row.date);
-    }
+      let monthExpenses = 0;
+      for (const row of yearExpenses.filter((r) => r.date.startsWith(monthStr))) {
+        monthExpenses += await convertOnDate(tx, Number(row.amount), row.currency, displayCurrency, row.date);
+      }
 
-    let netWorth = 0;
-    for (const a of allAssets) {
-      netWorth += await convertOnDate(tx, Number(a.currentValue), a.currency, displayCurrency, asOf);
-    }
-    for (const s of allSavings) {
-      netWorth += await convertOnDate(tx, Number(s.balance), s.currency, displayCurrency, asOf);
-    }
-    for (const l of allLoans) {
-      const outstanding = computeLoanAmortization({
-        principal: Number(l.principal),
-        apr: Number(l.apr),
-        termMonths: l.termMonths,
-        monthlyPayment: Number(l.monthlyPayment),
-        startDate: l.startDate,
-        asOf,
-      }).outstandingPrincipal;
-      netWorth -= await convertOnDate(tx, outstanding, l.currency, displayCurrency, asOf);
-    }
+      let netWorth = 0;
+      for (const a of allAssets) {
+        netWorth += await convertOnDate(tx, Number(a.currentValue), a.currency, displayCurrency, asOf);
+      }
+      for (const s of allSavings) {
+        netWorth += await convertOnDate(tx, Number(s.balance), s.currency, displayCurrency, asOf);
+      }
+      for (const l of allLoans) {
+        const outstanding = computeLoanAmortization({
+          principal: Number(l.principal),
+          apr: Number(l.apr),
+          termMonths: l.termMonths,
+          monthlyPayment: Number(l.monthlyPayment),
+          startDate: l.startDate,
+          asOf,
+        }).outstandingPrincipal;
+        netWorth -= await convertOnDate(tx, outstanding, l.currency, displayCurrency, asOf);
+      }
 
-    points.push({
-      month: monthStr,
-      income: monthIncome.toFixed(2),
-      expenses: monthExpenses.toFixed(2),
-      cashFlow: (monthIncome - monthExpenses).toFixed(2),
-      netWorth: netWorth.toFixed(2),
-    });
+      points.push({
+        month: monthStr,
+        income: monthIncome.toFixed(2),
+        expenses: monthExpenses.toFixed(2),
+        cashFlow: (monthIncome - monthExpenses).toFixed(2),
+        netWorth: netWorth.toFixed(2),
+      });
+    }
+  } catch (err) {
+    console.error("[dashboard] history currency conversion failed", err);
+    conversionFailed = true;
   }
 
-  return { year, currency: displayCurrency, points, availableYears };
+  return {
+    year,
+    currency: displayCurrency,
+    points: conversionFailed ? [] : points,
+    availableYears,
+    unavailable: conversionFailed,
+  };
 }

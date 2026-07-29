@@ -56,6 +56,7 @@ export interface DashboardHistory {
   currency: string;
   points: MonthlyHistoryPoint[];
   availableYears: number[];
+  unavailable: boolean;
 }
 
 export const getDashboardHistory = (year?: number) =>

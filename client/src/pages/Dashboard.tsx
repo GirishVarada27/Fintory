@@ -298,7 +298,11 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className={cardClass}>
             <h2 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">Net Worth by Month</h2>
-            {history.points.length === 0 ? (
+            {history.unavailable ? (
+              <p className="text-sm text-amber-600 dark:text-amber-400">
+                Currency conversion is temporarily unavailable, so this trend can't be shown right now.
+              </p>
+            ) : history.points.length === 0 ? (
               <p className="text-sm text-slate-600 dark:text-slate-400">No data for {selectedYear} yet.</p>
             ) : (
               <>
@@ -341,7 +345,11 @@ export default function Dashboard() {
             <h2 className="mb-2 text-lg font-semibold text-slate-900 dark:text-white">
               Income, Expenses &amp; Cash Flow
             </h2>
-            {history.points.length === 0 ? (
+            {history.unavailable ? (
+              <p className="text-sm text-amber-600 dark:text-amber-400">
+                Currency conversion is temporarily unavailable, so this trend can't be shown right now.
+              </p>
+            ) : history.points.length === 0 ? (
               <p className="text-sm text-slate-600 dark:text-slate-400">No data for {selectedYear} yet.</p>
             ) : (
               <ResponsiveContainer width="100%" height={240}>
